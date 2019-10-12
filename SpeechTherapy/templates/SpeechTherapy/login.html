@@ -2,9 +2,6 @@
 
 <link rel="stylesheet" type="text/css" href="{% static 'SpeechTherapy/style.css' %}"/>
 
-<script src="{% static 'SpeechTherapy/js/vue.js' %}"></script>
-<script src="{% static 'SpeechTherapy/js/profileForm.js' %}"></script>
-
 <div id="speech-therapy-app">
 	<div id='banner'>
 		<strong>Automated Speech Therapy</strong>
@@ -17,6 +14,7 @@
 			:user="user"
 			:processing='signingUp'
 			:submit-text='"Sign Up"'
+			:action='"/SpeechTherapy/signUp"'
 			:show-email='true'
 			:right-extra='"Back"'></profile-form>
 		<profile-form
@@ -27,6 +25,7 @@
 			:user="user"
 			:processing='signingIn'
 			:submit-text='"Sign In"'
+			:action='"/SpeechTherapy/signIn"'
 			:left-extra='"Need help signing in?"'
 			:right-extra='"Sign up"'></profile-form>
 	</div>

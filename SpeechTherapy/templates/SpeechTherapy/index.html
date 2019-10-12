@@ -14,12 +14,12 @@ window.onload = function() {
 	csrfTokenContainer.innerHTML = '{% csrf_token %}';
 
 	for (var i = 0; i < forms.length; i++) {
-		forms[i].appendChild(csrfTokenContainer);
+		forms[i].appendChild(csrfTokenContainer.cloneNode(true));
 	}
 }
 </script>
 
-{% if request.user.is_authenticated %}
+{% if user.id %}
 	{% include 'SpeechTherapy/dashboard.html' %}
 {% else %}
 	{% include 'SpeechTherapy/login.html' %}

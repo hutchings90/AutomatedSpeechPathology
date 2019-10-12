@@ -1,13 +1,13 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseNotFound
-from django.contrib.auth import authenticate
-from django.contrib.auth import logout
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 import json
 
 def getUserData(user):
 	if not user:
 		user = User()
+
 	return {
 		'id': user.id,
 		'username': user.username,
@@ -25,61 +25,82 @@ def getUsersRecordingsData(user):
 	return recordings
 
 def index(request):
-	user = request.user if request.user.is_authenticated else User()
+	if request.user.is_authenticated:
+		return HttpResponseRedirect('/SpeechTherapy/dashboard')
+
+	return render(request, 'SpeechTherapy/index.html', {
+		'data': json.dumps({
+			'user': getUserData(User()),
+			'activeTab': 'signIn',
+			'signingIn': False,
+			'signingUp': False
+		})
+	})
+
+def signUp(request):
+	post = request.POST
+	username = post.get('username')
+	email = post.get('email')
+	password = post.get('password')
+
+	user = User.objects.create_user(username, email=email, password=password)
+	user.save()
+
+	login(request, user)
+
+	return HttpResponseRedirect('/SpeechTherapy/dashboard')
+
+def signIn(request):
+	post = request.POST
+	username = request.POST.get('username')
+	password = request.POST.get('password')
+
+	user = authenticate(username=username, password=password)
+
+	if not user:
+		return HttpResponseRedirect('/SpeechTherapy')
+
+	login(request, user)
+
+	return HttpResponseRedirect('/SpeechTherapy/dashboard')
+
+
+def dashboard(request):
+	if not request.user.is_authenticated:
+		return HttpResponseRedirect('/SpeechTherapy')
+
+	user = request.user
 
 	return render(request, 'SpeechTherapy/index.html', {
 		'data': json.dumps({
 			'user': getUserData(user),
 			'resultsHistory': getUsersRecordingsData(user),
-			'activeTab': 'newRecording' if user.id else 'signIn',
-			'signingIn': False,
-			'signingUp': False,
+			'activeTab': 'newRecording',
 			'signingOut': False,
-			'processingNewRecording': False,
-			'errors': []
+			'processingNewRecording': False
 		})
 	})
-
-def signUp(request):
-	# post = request.POST
-	# User.objects.create_user(username=post['username'], password=post['password'])
-	body = json.loads(request.body)
-
-	user = User.objects.create_user(body['username'], email=body['email'], password=body['password'])
-	user.save()
-
-	return HttpResponse(json.dumps({
-		'user': getUserData(user),
-		'body': body
-	}))
-
-def signIn(request):
-	body = json.loads(request.body)
-
-	user = authenticate(username=body['username'], password=body['password'])
-	if user is None:
-		return HttpResponseNotFound('Sign in failed.')
-
-	return HttpResponse(json.dumps({
-		'user': getUserData(user),
-		'resultsHistory': getUsersRecordingsData(user)
-	}))
 
 def signOut(request):
 	logout(request)
 
-	return HttpResponse(json.dumps({
-		'user': getUserData(User())
-	}))
+	return HttpResponseRedirect('/SpeechTherapy')
 
 def updateUser(request):
+	if not request.user.is_authenticated:
+		return HttpResponseNotFound('User not found.')
+
 	user = request.user if request.user.is_authenticated else User()
 	body = json.loads(request.body)
+	attr = body['attr']
+	value = body['value']
 
-	if not user.id:
-		return HttpResponseNotFound('User not found.')
-	return HttpResponse(json.dumps(getUserData(user)))
-	user[body['attr']] = body['value']
+	if attr == 'password':
+		user.set_password(value)
+	else:
+		setattr(user, attr, value)
+
+	user.save()
 
 	return HttpResponse(json.dumps(getUserData(user)))
 

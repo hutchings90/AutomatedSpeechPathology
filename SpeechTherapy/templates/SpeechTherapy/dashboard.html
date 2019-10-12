@@ -1,3 +1,5 @@
+{% load static %}
+
 <script src="{% static 'SpeechTherapy/js/newRecording.js' %}"></script>
 <script src="{% static 'SpeechTherapy/js/resultsHistory.js' %}"></script>
 
@@ -20,11 +22,14 @@
 			:results="resultsHistory"></results-history>
 		<profile-form
 			@update-attr='updateUser'
+			@right-extra-clicked='signOut'
 			v-show="activeTab == 'profile'"
 			:user="user"
 			:processing='signingOut'
+			:method='"POST"'
 			:right-extra='"Sign Out"'></profile-form>
 	</div>
+	<form id='sign-out-form' action='/SpeechTherapy/signOut' method='post'></form>
 </div>
 
 <script>
@@ -41,14 +46,7 @@ new Vue({
 			this.activeTab = tab;
 		},
 		signOut: function() {
-			this.sendRequest('{% url "signOut" %}', 'signingOut', null, (response) => {
-				this.user = response.user;
-				this.resultsHistory = [];
-				// TODO: Halt activity
-				this.activateTab('signIn');
-			}, (response, status) => {
-				// TODO: Display sign-out error
-			});
+			document.getElementById('sign-out-form').submit();
 		},
 		newRecording: function() {
 			// TODO: implement new recording
@@ -66,6 +64,9 @@ new Vue({
 				value: this.user[attr]
 			}, null, (response, status) => {
 				// TODO: Display update error
+				let div = document.createElement('div');
+				div.innerHTML = response;
+				document.body.appendChild(div);
 			});
 		},
 		sendRequest: function(url, processFlag, data, onSuccess, onError, onComplete) {

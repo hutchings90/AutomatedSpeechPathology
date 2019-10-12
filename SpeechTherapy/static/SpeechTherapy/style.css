@@ -45,6 +45,10 @@ body {
 	text-align: center;
 }
 
+#sign-out-form {
+	display: none;
+}
+
 .form-container {
 	display: inline-block;
 }

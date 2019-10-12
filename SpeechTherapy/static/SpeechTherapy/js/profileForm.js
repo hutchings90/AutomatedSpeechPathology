@@ -1,21 +1,21 @@
 Vue.component('profile-form', {
-	props: [ 'user', 'processing', 'submitText', 'showEmail', 'leftExtra', 'rightExtra', 'preventSubmission' ],
+	props: [ 'user', 'processing', 'submitText', 'action', 'showEmail', 'leftExtra', 'rightExtra', 'preventSubmission' ],
 	template: `<div class='form-container'>
-		<form @submit='submit($event)'>
+		<form @submit='submit($event)' :action='action' method='POST'>
 			<div>
 				<label>Username <span class='required'>*</span></label>
 				<br>
-				<input v-model.lazy='user.username' @change='updateAttr("username")' :disabled='processing' type='username' autofocus/>
+				<input name='username' v-model.lazy='user.username' @change='updateAttr("username")' type='username' autofocus/>
 			</div>
 			<div>
 				<label>Password <span class='required'>*</span></label>
 				<br>
-				<input v-model.lazy='user.password' @change='updateAttr("password")' :disabled='processing' type='password'/>
+				<input name='password' v-model.lazy='user.password' @change='updateAttr("password")' type='password'/>
 			</div>
 			<div v-if='showEmail'>
 				<label>Email</label>
 				<br>
-				<input v-model.lazy='user.email' @change='updateAttr("email")' :disabled='processing' type='email'/>
+				<input name='email' v-model.lazy='user.email' @change='updateAttr("email")' type='email'/>
 			</div>
 			<button v-if='submitText' v-html='submitText' @click='submitButtonClicked' :disabled='processing'></button>
 		</form>
