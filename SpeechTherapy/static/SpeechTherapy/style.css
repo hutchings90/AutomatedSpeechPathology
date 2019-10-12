@@ -1,0 +1,101 @@
+body {
+	margin: 10px;
+}
+
+#speech-therapy-app {
+	min-width: 800px;
+}
+
+#banner {
+	margin-bottom: 20px;
+}
+
+#banner > strong {
+	font-size: 24px;
+	margin: 0 20px;
+}
+
+#tab-headers {
+	display: inline-block;
+	font-size: 0;
+	padding: 0;
+	float: right;
+}
+
+#tab-headers li {
+	display: inline-block;
+	width: 125px;
+	text-align: center;
+	color: black;
+	padding: 3px;
+	font-size: initial;
+	cursor: pointer;
+	border-radius: 5px;
+	margin-right: 5px;
+	border: 1px solid;
+}
+
+#tab-headers li.active {
+	color: white;
+	background: black;
+	border-color: black;
+}
+
+#tab-content {
+	text-align: center;
+}
+
+.form-container {
+	display: inline-block;
+}
+
+.extra-links > a {
+	cursor: pointer;
+	font-size: 14px;
+	text-decoration: underline;
+}
+
+.left {
+	float: left;
+}
+
+.right {
+	float: right;
+}
+
+.required {
+	color: red;
+}
+
+.hide {
+	display: none;
+}
+
+form {
+	display: inline-block;
+	background-color: #eeeeee;
+	border: 1px solid black;
+	border-radius: 5px;
+	padding: 20px;
+}
+
+form > div {
+	text-align: left;
+	margin-bottom: 20px;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+thead {
+	border-bottom: 1px solid black;
+}
+
+thead td:not(:first-child) {
+	border-left: 1px solid black;
+}
+
+td {
+	padding: 5 5px;
+}

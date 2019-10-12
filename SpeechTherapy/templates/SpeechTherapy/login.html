@@ -1,0 +1,56 @@
+{% load static %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'SpeechTherapy/style.css' %}"/>
+
+<script src="{% static 'SpeechTherapy/js/vue.js' %}"></script>
+<script src="{% static 'SpeechTherapy/js/profileForm.js' %}"></script>
+
+<div id="speech-therapy-app">
+	<div id='banner'>
+		<strong>Automated Speech Therapy</strong>
+	</div>
+	<div id="tab-content">
+		<profile-form
+			v-show="activeTab == 'signUp'"
+			@submit='signUp'
+			@right-extra-clicked='activateTab("signIn")'
+			:user="user"
+			:processing='signingUp'
+			:submit-text='"Sign Up"'
+			:show-email='true'
+			:right-extra='"Back"'></profile-form>
+		<profile-form
+			v-show="activeTab == 'signIn'"
+			@submit='signIn'
+			@right-extra-clicked='activateTab("signUp")'
+			@left-extra-clicked='forgotPassword'
+			:user="user"
+			:processing='signingIn'
+			:submit-text='"Sign In"'
+			:left-extra='"Need help signing in?"'
+			:right-extra='"Sign up"'></profile-form>
+	</div>
+</div>
+
+<script>
+new Vue({
+	el: '#speech-therapy-app',
+	data: JSON.parse('{{ data | escapejs }}'),
+	methods: {
+		activateTab: function(tab) {
+			this.activeTab = tab;
+		},
+		signUp: function() {
+			console.log('signUp');
+			this.signingUp = true;
+		},
+		signIn: function() {
+			console.log('signIn');
+			this.signingIn = true;
+		},
+		forgotPassword: function() {
+			// TODO: Implement forgot password
+		}
+	},
+});
+</script>

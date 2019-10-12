@@ -1,0 +1,93 @@
+<script src="{% static 'SpeechTherapy/js/newRecording.js' %}"></script>
+<script src="{% static 'SpeechTherapy/js/resultsHistory.js' %}"></script>
+
+<div id="speech-therapy-app">
+	<div id='banner'>
+		<strong>Automated Speech Therapy</strong>
+		<ul id="tab-headers">
+			<li @click="activateTab('newRecording')" :class="headerClass('newRecording')">New Recording</li>
+			<li @click="activateTab('resultsHistory')" :class="headerClass('resultsHistory')">Results History</li>
+			<li @click="activateTab('profile')" :class="headerClass('profile')">Profile</li>
+		</ul>
+	</div>
+	<div id="tab-content">
+		<new-recording
+			v-show="activeTab == 'newRecording'"
+			@new-recording='newRecording'
+			:processing='processingNewRecording'></new-recording>
+		<results-history
+			v-show="activeTab == 'resultsHistory'"
+			:results="resultsHistory"></results-history>
+		<profile-form
+			@update-attr='updateUser'
+			v-show="activeTab == 'profile'"
+			:user="user"
+			:processing='signingOut'
+			:right-extra='"Sign Out"'></profile-form>
+	</div>
+</div>
+
+<script>
+new Vue({
+	el: '#speech-therapy-app',
+	data: JSON.parse('{{ data | escapejs }}'),
+	methods: {
+		headerClass: function(tab) {
+			return {
+				active: tab == this.activeTab
+			};
+		},
+		activateTab: function(tab) {
+			this.activeTab = tab;
+		},
+		signOut: function() {
+			this.sendRequest('{% url "signOut" %}', 'signingOut', null, (response) => {
+				this.user = response.user;
+				this.resultsHistory = [];
+				// TODO: Halt activity
+				this.activateTab('signIn');
+			}, (response, status) => {
+				// TODO: Display sign-out error
+			});
+		},
+		newRecording: function() {
+			// TODO: implement new recording
+			this.sendRequest('{% url "newRecording" %}', 'processingNewRecording', {
+				audio: 'Some noise'
+			}, (response) => {
+				this.resultsHistory.push(response.results);
+			}, (response, status) => {
+				// TODO: Display new recording error
+			});
+		},
+		updateUser: function(attr) {
+			this.sendRequest('{% url "updateUser" %}', null, {
+				attr: attr,
+				value: this.user[attr]
+			}, null, (response, status) => {
+				// TODO: Display update error
+			});
+		},
+		sendRequest: function(url, processFlag, data, onSuccess, onError, onComplete) {
+			if (this.processFlag) {
+				// TODO: Display duplicate attempt error
+				return;
+			}
+			let request = new XMLHttpRequest();
+			request.open('POST', url);
+			request.setRequestHeader('X-CSRFToken', '{{ csrf_token }}');
+			request.onreadystatechange = () => {
+				if (request.readyState == 4) {
+					if (request.status == 200) {
+						if (onSuccess) onSuccess(JSON.parse(request.responseText));
+					}
+					else if (onError) onError(request.responseText, request.status);
+					if (processFlag) this[processFlag] = false;
+				}
+			};
+			if (processFlag) this[processFlag] = true;
+			request.send(JSON.stringify(data));
+		}
+	}
+});
+</script>

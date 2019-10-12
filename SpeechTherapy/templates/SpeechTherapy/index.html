@@ -1,0 +1,26 @@
+{% load static %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'SpeechTherapy/style.css' %}"/>
+
+<script src="{% static 'SpeechTherapy/js/vue.js' %}"></script>
+<script src="{% static 'SpeechTherapy/js/profileForm.js' %}"></script>
+
+<script>
+window.onload = function() {
+	var forms = document.getElementsByTagName('form');
+
+	var csrfTokenContainer = document.createElement('div');
+	csrfTokenContainer.className = 'hide';
+	csrfTokenContainer.innerHTML = '{% csrf_token %}';
+
+	for (var i = 0; i < forms.length; i++) {
+		forms[i].appendChild(csrfTokenContainer);
+	}
+}
+</script>
+
+{% if request.user.is_authenticated %}
+	{% include 'SpeechTherapy/dashboard.html' %}
+{% else %}
+	{% include 'SpeechTherapy/login.html' %}
+{% endif %}
