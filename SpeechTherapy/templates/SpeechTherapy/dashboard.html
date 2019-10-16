@@ -1,7 +1,7 @@
 {% load static %}
 
 <script src="{% static 'SpeechTherapy/js/newRecording.js' %}"></script>
-<script src="{% static 'SpeechTherapy/js/resultsHistory.js' %}"></script>
+<script src="{% static 'SpeechTherapy/js/recordings.js' %}"></script>
 
 <div id="speech-therapy-app">
 	<div id='banner'>
@@ -15,11 +15,14 @@
 	<div id="tab-content">
 		<new-recording
 			v-show="activeTab == 'newRecording'"
+			@get-new-text-samples='getNewTextSamples'
 			@new-recording='newRecording'
-			:processing='processingNewRecording'></new-recording>
-		<results-history
+			:getting-text-samples='gettingTextSamples'
+			:processing='processingNewRecording'
+			:text-samples='textSamples'></new-recording>
+		<recordings
 			v-show="activeTab == 'resultsHistory'"
-			:results="resultsHistory"></results-history>
+			:recordings="recordings"></recordings>
 		<profile-form
 			@update-attr='updateUser'
 			@right-extra-clicked='signOut'
@@ -48,29 +51,34 @@ new Vue({
 		signOut: function() {
 			document.getElementById('sign-out-form').submit();
 		},
-		newRecording: function() {
-			// TODO: implement new recording
-			this.sendRequest('{% url "newRecording" %}', 'processingNewRecording', {
+		getNewTextSamples: function() {
+			this.sendRequest('{% url "getTextSamples" %}', 'gettingTextSamples', JSON.stringify({
 				audio: 'Some noise'
-			}, (response) => {
-				this.resultsHistory.push(response.results);
+			}), (response) => {
+				this.textSamples = response.textSamples;
 			}, (response, status) => {
 				// TODO: Display new recording error
 			});
 		},
+		newRecording: function(data) {
+			// TODO: send actual recording
+			this.sendRequest('{% url "newRecording" %}', 'processingNewRecording', JSON.stringify(data), (response) => {
+				this.recordings.push(response.recording);
+			}, (response, status) => {
+				// TODO: Display new recording error
+				window.open().document.write(response);
+			});
+		},
 		updateUser: function(attr) {
-			this.sendRequest('{% url "updateUser" %}', null, {
+			this.sendRequest('{% url "updateUser" %}', null, JSON.stringify({
 				attr: attr,
 				value: this.user[attr]
-			}, null, (response, status) => {
+			}), null, (response, status) => {
 				// TODO: Display update error
-				let div = document.createElement('div');
-				div.innerHTML = response;
-				document.body.appendChild(div);
 			});
 		},
 		sendRequest: function(url, processFlag, data, onSuccess, onError, onComplete) {
-			if (this.processFlag) {
+			if (this[processFlag]) {
 				// TODO: Display duplicate attempt error
 				return;
 			}
@@ -87,7 +95,7 @@ new Vue({
 				}
 			};
 			if (processFlag) this[processFlag] = true;
-			request.send(JSON.stringify(data));
+			request.send(data);
 		}
 	}
 });

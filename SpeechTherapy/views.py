@@ -2,7 +2,11 @@ from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+
+from datetime import datetime
 import json
+
+from .models import *
 
 def getUserData(user):
 	if not user:
@@ -16,13 +20,15 @@ def getUserData(user):
 	}
 
 def getUsersRecordingsData(user):
-	return []
-	recordings = user.recordings
-	for i in range(len(recordings)):
-		recording = recordings[i]
+	recordings = []
+
+	for recording in Recording.objects.filter(user_id=user.id).reverse()[:100:1]:
 		recordings.append(recording.data())
 
 	return recordings
+
+def getTextSampleData(id=0):
+	return TextSample.objects.filter(id__gt=id).values()[:10:1]
 
 def index(request):
 	if request.user.is_authenticated:
@@ -64,7 +70,6 @@ def signIn(request):
 
 	return HttpResponseRedirect('/SpeechTherapy/dashboard')
 
-
 def dashboard(request):
 	if not request.user.is_authenticated:
 		return HttpResponseRedirect('/SpeechTherapy')
@@ -73,13 +78,20 @@ def dashboard(request):
 
 	return render(request, 'SpeechTherapy/index.html', {
 		'data': json.dumps({
+			'textSamples': getTextSampleData(),
 			'user': getUserData(user),
-			'resultsHistory': getUsersRecordingsData(user),
+			'recordings': getUsersRecordingsData(user),
 			'activeTab': 'newRecording',
 			'signingOut': False,
+			'gettingTextSamples': False,
 			'processingNewRecording': False
 		})
 	})
+
+def getTextSamples(request):
+	return HttpResponse(json.dumps({
+		'textSamples': []
+	}));
 
 def signOut(request):
 	logout(request)
@@ -107,8 +119,13 @@ def updateUser(request):
 def newRecording(request):
 	body = json.loads(request.body)
 
-	# TODO: Implement new recording
+	recording = Recording()
+	recording.date_recorded = datetime.now()
+	recording.user = request.user
+	recording.text_sample = TextSample.objects.get(pk=body['text_sample_id'])
+	recording.score = 0
+	recording.save()
 
 	return HttpResponse(json.dumps({
-		'audio': body['audio']
+		'recording': recording.data()
 	}))

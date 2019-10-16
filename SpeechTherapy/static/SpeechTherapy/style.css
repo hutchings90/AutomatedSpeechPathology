@@ -75,6 +75,14 @@ body {
 	display: none;
 }
 
+.begin-recording {
+	color: #0d0;
+}
+
+.end-recording {
+	color: red;
+}
+
 form {
 	display: inline-block;
 	background-color: #eeeeee;
@@ -89,6 +97,7 @@ form > div {
 }
 
 table {
+	display: inline-block;
 	border-collapse: collapse;
 }
 

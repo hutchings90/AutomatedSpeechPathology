@@ -9,5 +9,6 @@ urlpatterns = [
 	path('dashboard', views.dashboard, name='dashboard'),
 	path('signOut', views.signOut, name='signOut'),
 	path('updateUser', views.updateUser, name='updateUser'),
+	path('getTextSamples', views.getTextSamples, name='getTextSamples'),
 	path('newRecording', views.newRecording, name='newRecording'),
 ]
