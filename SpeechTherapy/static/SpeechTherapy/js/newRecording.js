@@ -16,33 +16,11 @@ Vue.component('new-recording', {
 		</div>
 	</div>`,
 	created: function() {
-		this.nextTextSample();
-		this.mediaDevices.getUserMedia(this.constraints)
-		.then((stream) => {
-
-			mediaRecorder = new MediaRecorder(stream);
-
-			mediaRecorder.onstop = (e) => {
-				this.name = this.generateClipName();
-				this.audioSrc = URL.createObjectURL(new Blob(this.chunks, { type: 'audio/ogg; codecs=opus' }));
-				this.chunks = [];
-				this.listening = false;
-				this.$emit('new-recording', {
-					blob: new Blob(this.chunks, { type: 'text/plain'}),
-					name: this.name,
-					text_sample_id: this.activeTextSample.id
-				});
-			};
-
-			mediaRecorder.ondataavailable = (e) => {
-				this.chunks.push(e.data);
-			};
-
-			this.mediaRecorder = mediaRecorder;
-		})
-		.catch((err) => {
-			console.log('The following error occurred: ' + err);
-		});
+		console.log(navigator.mediaDevices);
+		if (this.browserSupportsRecording) {
+			this.initMediaDevices();
+			this.nextTextSample();
+		}
 	},
 	data: function() {
 		return {
@@ -70,6 +48,34 @@ Vue.component('new-recording', {
 		}
 	},
 	methods: {
+		initMediaDevices: function() {
+			this.mediaDevices.getUserMedia(this.constraints)
+			.then((stream) => {
+
+				mediaRecorder = new MediaRecorder(stream);
+
+				mediaRecorder.onstop = (e) => {
+					this.name = this.generateClipName();
+					this.audioSrc = URL.createObjectURL(new Blob(this.chunks, { type: 'audio/ogg; codecs=opus' }));
+					this.chunks = [];
+					this.listening = false;
+					this.$emit('new-recording', {
+						blob: new Blob(this.chunks, { type: 'text/plain'}),
+						name: this.name,
+						text_sample_id: this.activeTextSample.id
+					});
+				};
+
+				mediaRecorder.ondataavailable = (e) => {
+					this.chunks.push(e.data);
+				};
+
+				this.mediaRecorder = mediaRecorder;
+			})
+			.catch((err) => {
+				console.log('The following error occurred: ' + err);
+			});
+		},
 		nextTextSample: function() {
 			this.setActiveTextSample(this.textSamples.indexOf(this.activeTextSample) + 1);
 		},
