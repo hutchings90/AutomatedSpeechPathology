@@ -1,7 +1,7 @@
 Vue.component('profile-form', {
 	props: [ 'user', 'processing', 'submitText', 'action', 'showEmail', 'leftExtra', 'rightExtra' ],
 	template: `<div>
-		<form @submit='submit($event)' :action='action' method='POST'>
+		<form @submit.prevent='submit($event)' :action='action' method='POST'>
 			<div>
 				<label>Username <span class='required'>*</span></label>
 				<br>
@@ -30,6 +30,7 @@ Vue.component('profile-form', {
 		},
 		submit: function(e) {
 			this.$emit('submit', e);
+			return false;
 		},
 		leftExtraClicked: function() {
 			this.$emit('left-extra-clicked');

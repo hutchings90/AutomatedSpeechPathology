@@ -39,15 +39,33 @@ def getRecordingCount(user):
 	return Recording.objects.filter(user_id=user.id).count()
 
 def index(request):
-	if request.user.is_authenticated:
-		return HttpResponseRedirect('/SpeechTherapy/dashboard')
+	signedIn = request.user.is_authenticated
+
+	if not signedIn:
+		user = User()
+		textSamples = []
+		activeTab = 'signIn'
+	else:
+		user = request.user
+		textSamples = getTextSampleData()
+		activeTab = 'resultsHistory'
 
 	return render(request, 'SpeechTherapy/index.html', {
 		'data': json.dumps({
-			'user': getUserData(User()),
-			'activeTab': 'signIn',
+			'user': getUserData(user),
+			'recordings': getUsersRecordingsData(user),
+			'recordingCount': getRecordingCount(user),
+			'textSamples': textSamples,
+			'activeTab': activeTab,
 			'signingIn': False,
-			'signingUp': False
+			'signingUp': False,
+			'signingOut': False,
+			'gettingTextSamples': False,
+			'gettingRecordings': False,
+			'processingNewRecording': False,
+			'recordedSinceGetRecordings': False,
+			'recording': None,
+			'csrfToken': csrf.get_token(request)
 		})
 	})
 
@@ -58,15 +76,16 @@ def signUp(request):
 	email = post.get('email')
 	password = post.get('password')
 
-	try:
-		user = User.objects.create_user(username, email=email, password=password)
-		user.save()
+	user = User.objects.create_user(username, email=email, password=password)
+	user.save()
 
-		login(request, user)
-	except:
-		return HttpResponseRedirect('/SpeechTherapy')
+	login(request, user)
 
-	return HttpResponseRedirect('/SpeechTherapy/dashboard')
+	return HttpResponse(json.dumps({
+		'user': getUserData(user),
+		'textSamples': getTextSampleData(),
+		'csrfToken': csrf.get_token(request)
+	}))
 
 def signIn(request):
 	post = request.POST
@@ -77,33 +96,19 @@ def signIn(request):
 	user = authenticate(username=username, password=password)
 
 	if not user:
-		return HttpResponseRedirect('/SpeechTherapy')
+		return HttpResponseNotFound(json.dumps({
+			'message': 'user not found',
+			'username': username,
+			'password': password
+		}))
 
 	login(request, user)
 
-	return HttpResponseRedirect('/SpeechTherapy/dashboard')
-
-def dashboard(request):
-	if not request.user.is_authenticated:
-		return HttpResponseRedirect('/SpeechTherapy')
-
-	user = request.user
-
-	return render(request, 'SpeechTherapy/index.html', {
-		'data': json.dumps({
-			'textSamples': getTextSampleData(),
-			'user': getUserData(user),
-			'recordings': getUsersRecordingsData(user),
-			'recordingCount': getRecordingCount(user),
-			'recording': None,
-			'activeTab': 'resultsHistory',
-			'signingOut': False,
-			'gettingTextSamples': False,
-			'gettingRecordings': False,
-			'processingNewRecording': False,
-			'recordedSinceGetRecordings': False
-		})
-	})
+	return HttpResponse(json.dumps({
+		'user': getUserData(user),
+		'textSamples': getTextSampleData(),
+		'csrfToken': csrf.get_token(request)
+	}))
 
 def getTextSamples(request):
 	return HttpResponse(json.dumps({
@@ -113,11 +118,17 @@ def getTextSamples(request):
 def signOut(request):
 	logout(request)
 
-	return HttpResponseRedirect('/SpeechTherapy')
+	return HttpResponse(json.dumps({
+		'user': getUserData(User()),
+		'csrfToken': csrf.get_token(request)
+	}))
 
 def updateUser(request):
 	if not request.user.is_authenticated:
-		return HttpResponseNotFound('User not found.')
+		return HttpResponseNotFound(json.dumps({
+			'message': 'User not found.',
+			'user': request.user.id
+		}))
 
 	user = request.user
 	post = request.POST
@@ -133,9 +144,11 @@ def updateUser(request):
 	user.save()
 
 	if attr == 'password':
-		login(request, authenticate(username=user.username, password=user.password))
+		login(request, authenticate(username=user.username, password=value))
 
-	return HttpResponse(json.dumps(csrf.get_token(request)))
+	return HttpResponse(json.dumps({
+		'csrfToken': csrf.get_token(request)
+	}))
 
 def getRecordings(request):
 	post = request.POST

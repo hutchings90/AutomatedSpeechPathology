@@ -3,24 +3,249 @@
 <link rel="stylesheet" type="text/css" href="{% static 'SpeechTherapy/style.css' %}"/>
 
 <script src="{% static 'SpeechTherapy/js/vue.js' %}"></script>
-<script src="{% static 'SpeechTherapy/js/profileForm.js' %}"></script>
+<script src="{% static 'SpeechTherapy/js/profileForm.js' %}"></script><script src='{% static "SpeechTherapy/js/newRecording.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/recording.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/recordings.js" %}'></script>
+
+<title>Automated Speech Therapy</title>
+
+<div id='speech-therapy-app'>
+	<div id='banner'>
+		<strong>Automated Speech Therapy</strong>
+		<ul v-if='signedIn' id='tab-headers'>
+			<li @click='activateTab("newRecording")' :class='headerClass("newRecording")'>New Recording</li>
+			<li @click='activateResultsHistoryTab' :class='resultsHistoryClass'>Results History (<span v-html='recordingCount'></span>)</li>
+			<li @click='activateTab("profile")' :class='headerClass("profile")'>Profile</li>
+		</ul>
+	</div>
+	<div id='tab-content'>
+		<template v-if='signedIn'>
+			<new-recording
+				v-show='activeTab == "newRecording"'
+				@get-new-text-samples='getNewTextSamples'
+				@new-recording='newRecording'
+				:getting-text-samples='gettingTextSamples'
+				:processing-new-recording='processingNewRecording'
+				:text-samples='textSamples'></new-recording>
+			<recordings
+				v-show='activeTab == "resultsHistory"'
+				@get-recordings='getRecordings'
+				:recordings='recordings'
+				:recording-count='recordingCount'
+				:getting-recordings='gettingRecordings'
+				:shown='activeTab == "resultsHistory"'
+				:recorded-since-get-recordings='recordedSinceGetRecordings'></recordings>
+			<profile-form
+				@update-attr='updateUser'
+				@right-extra-clicked='signOut'
+				v-show='activeTab == "profile"'
+				:user='user'
+				:processing='signingOut'
+				:method='"POST"'
+				:right-extra='"Sign Out"'></profile-form>
+		</template>
+		<template v-else>
+			<profile-form
+				v-show='activeTab == "signUp"'
+				@submit='signUp'
+				@right-extra-clicked='activateTab("signIn")'
+				:user='user'
+				:processing='signingUp'
+				:submit-text='"Sign Up"'
+				:action='"/SpeechTherapy/signUp"'
+				:show-email='true'
+				:right-extra='"Back"'></profile-form>
+			<profile-form
+				v-show='activeTab == "signIn"'
+				@submit='signIn'
+				@right-extra-clicked='activateTab("signUp")'
+				@left-extra-clicked='forgotPassword'
+				:user='user'
+				:processing='signingIn'
+				:submit-text='"Sign In"'
+				:action='"/SpeechTherapy/signIn"'
+				:left-extra='"Need help signing in?"'
+				:right-extra='"Sign up"'></profile-form>
+		</template>
+	</div>
+</div>
 
 <script>
-window.onload = function() {
-	var forms = document.getElementsByTagName('form');
-
-	var csrfTokenContainer = document.createElement('div');
-	csrfTokenContainer.className = 'hide';
-	csrfTokenContainer.innerHTML = '{% csrf_token %}';
-
-	for (var i = 0; i < forms.length; i++) {
-		forms[i].appendChild(csrfTokenContainer.cloneNode(true));
+new Vue({
+	el: '#speech-therapy-app',
+	data: JSON.parse('{{ data | escapejs }}'),
+	created: function() {
+		// TODO: Testing google Speech-to-Text API. To be removed once finished testing.
+		// this.sendRequest('https://speech.googleapis.com/v1/speech:recognize', null, [{
+		// 	key: 'config',
+		// 	value: {
+		// 		encoding: 'OGG_OPUS',
+		// 		sampleRateHertz: 8000,
+		// 		languageCode: 'en-US'
+		// 	}
+		// }, {
+		// 	key: 'audio',
+		// 	value: new Blob([], { type: 'audio/ogg; codecs=opus' })
+		// }], (response) => {
+		// 	console.log(response);
+		// }, (response) => {
+		// 	console.log(response);
+		// });
+	},
+	computed: {
+		signedIn: function() { return this.user.id; },
+		hasRecordings: function() { return this.recordingCount > 0; },
+		resultsHistoryClass: function() {
+			let resultsHistoryClass = this.headerClass("resultsHistory");
+			resultsHistoryClass.disabled = !this.hasRecordings;
+			return resultsHistoryClass;
+		}
+	},
+	methods: {
+		headerClass: function(tab) {
+			return {
+				active: tab == this.activeTab
+			};
+		},
+		activateTab: function(tab) {
+			this.activeTab = tab;
+		},
+		activateResultsHistoryTab: function() {
+			if (!this.hasRecordings) return;
+			this.activateTab("resultsHistory");
+		},
+		signUp: function() {
+			this.sendRequest('{% url "signUp" %}', 'signingUp', [{
+				key: 'username',
+				value: this.user.username
+			}, {
+				key: 'password',
+				value: this.user.password
+			}], (response) => {
+				this.user = response.user;
+				this.textSamples = response.textSamples
+				this.csrfToken = response.csrfToken;
+				this.activateTab('newRecording')
+			}, (response, status) => {
+				// TODO: Display sign in error
+			});
+		},
+		signIn: function() {
+			this.sendRequest('{% url "signIn" %}', 'signingIn', [{
+				key: 'username',
+				value: this.user.username
+			}, {
+				key: 'password',
+				value: this.user.password
+			}], (response) => {
+				this.user = response.user;
+				this.textSamples = response.textSamples
+				this.csrfToken = response.csrfToken;
+				this.activateTab('newRecording')
+			}, (response, status) => {
+				// TODO: Display sign up error
+			});
+		},
+		forgotPassword: function() {
+			// TODO: Implement forgot password
+		},
+		signOut: function() {
+			this.sendRequest('{% url "signOut" %}', 'signingOut', [], (response) => {
+				this.user = response.user;
+				this.textSamples = [];
+				this.csrfToken = response.csrfToken;
+				this.activateTab('signIn')
+			}, (response, status) => {
+				// TODO: Display sign out error
+			});
+		},
+		getNewTextSamples: function(data) {
+			this.sendRequest('{% url "getTextSamples" %}', 'gettingTextSamples', [{
+				key: 'textSamples',
+				value: this.textSamples
+			}], (response) => {
+				this.textSamples = response.textSamples;
+			}, (response, status) => {
+				// TODO: Display new recording error
+			});
+		},
+		getRecordings: function(data) {
+			this.sendRequest('{% url "getRecordings" %}', 'gettingRecordings', [{
+				key: 'page',
+				value: data.page
+			}, {
+				key: 'recordsPerPage',
+				value: data.recordsPerPage
+			}], (response) => {
+				this.recordedSinceGetRecordings = false;
+				this.recordings = response.recordings;
+			}, (response, status) => {
+				// TODO: Display get recordings error
+			});
+		},
+		newRecording: function(data) {
+			// TODO: send actual recording
+			this.sendRequest('{% url "newRecording" %}', 'processingNewRecording', [{
+				key: 'audio',
+				value: data.blob,
+				filename: data.filename
+			}, {
+				key: 'text_sample_id',
+				value: data['text_sample_id']
+			}], (response) => {
+				this.recordedSinceGetRecordings = true;
+				this.recording = response.recording;
+				this.recordingCount = response.recordingCount;
+				this.recordings = [];
+			}, (response, status) => {
+				// TODO: Display new recording error
+				window.open().document.write(response);
+			});
+		},
+		updateUser: function(attr) {
+			this.sendRequest('{% url "updateUser" %}', null, [{
+				key: 'attr',
+				value: attr
+			},  {
+				key: 'value',
+				value: this.user[attr],
+			}], (response) => {
+				this.csrfToken = response.csrfToken;
+			}, (response, status) => {
+				// TODO: Display update error
+			});
+		},
+		sendRequest: function(url, processFlag, data, onSuccess, onError) {
+			if (this[processFlag]) {
+				// TODO: Display duplicate attempt error
+				return;
+			}
+			let request = new XMLHttpRequest();
+			request.open('POST', url);
+			request.setRequestHeader('X-CSRFToken', this.csrfToken);
+			request.withCredentials = true;
+			request.onreadystatechange = () => {
+				if (request.readyState == 4) {
+					if (request.status == 200) {
+						if (onSuccess) onSuccess(JSON.parse(request.responseText));
+					}
+					else if (onError) onError(request.responseText, request.status);
+					if (processFlag) this[processFlag] = false;
+				}
+			};
+			if (processFlag) this[processFlag] = true;
+			request.send(this.JSONToFormData(data));
+		},
+		JSONToFormData: function(items) {
+			let formData = new FormData();
+			for (let i = 0; i < items.length; i++) {
+				let item = items[i];
+				let filename = item.filename;
+				if (filename) formData.append(item.key, item.value, item.filename);
+				else formData.append(item.key, item.value);
+			}
+			return formData;
+		}
 	}
-}
+});
 </script>
-
-{% if user.id %}
-	{% include 'SpeechTherapy/dashboard.html' %}
-{% else %}
-	{% include 'SpeechTherapy/login.html' %}
-{% endif %}
