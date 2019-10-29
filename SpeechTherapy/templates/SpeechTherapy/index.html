@@ -123,6 +123,8 @@ new Vue({
 				value: this.user.password
 			}], (response) => {
 				this.user = response.user;
+				this.recordings = response.recordings;
+				this.recordingCount = response.recordingCount;
 				this.textSamples = response.textSamples
 				this.csrfToken = response.csrfToken;
 				this.activateTab('newRecording')
@@ -139,6 +141,8 @@ new Vue({
 				value: this.user.password
 			}], (response) => {
 				this.user = response.user;
+				this.recordings = response.recordings;
+				this.recordingCount = response.recordingCount;
 				this.textSamples = response.textSamples
 				this.csrfToken = response.csrfToken;
 				this.activateTab('newRecording')
@@ -152,6 +156,8 @@ new Vue({
 		signOut: function() {
 			this.sendRequest('{% url "signOut" %}', 'signingOut', [], (response) => {
 				this.user = response.user;
+				this.recordings = [];
+				this.recordingCount = 0;
 				this.textSamples = [];
 				this.csrfToken = response.csrfToken;
 				this.activateTab('signIn')

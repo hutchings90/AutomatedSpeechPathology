@@ -83,6 +83,8 @@ def signUp(request):
 
 	return HttpResponse(json.dumps({
 		'user': getUserData(user),
+		'recordings': getUsersRecordingsData(user),
+		'recordingCount': getRecordingCount(user),
 		'textSamples': getTextSampleData(),
 		'csrfToken': csrf.get_token(request)
 	}))
@@ -96,16 +98,14 @@ def signIn(request):
 	user = authenticate(username=username, password=password)
 
 	if not user:
-		return HttpResponseNotFound(json.dumps({
-			'message': 'user not found',
-			'username': username,
-			'password': password
-		}))
+		return HttpResponseNotFound('user not found')
 
 	login(request, user)
 
 	return HttpResponse(json.dumps({
 		'user': getUserData(user),
+		'recordings': getUsersRecordingsData(user),
+		'recordingCount': getRecordingCount(user),
 		'textSamples': getTextSampleData(),
 		'csrfToken': csrf.get_token(request)
 	}))
