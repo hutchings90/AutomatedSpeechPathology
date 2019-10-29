@@ -10,5 +10,6 @@ urlpatterns = [
 	path('signOut', views.signOut, name='signOut'),
 	path('updateUser', views.updateUser, name='updateUser'),
 	path('getTextSamples', views.getTextSamples, name='getTextSamples'),
+	path('getRecordings', views.getRecordings, name='getRecordings'),
 	path('newRecording', views.newRecording, name='newRecording'),
 ]

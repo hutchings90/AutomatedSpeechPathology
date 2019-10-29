@@ -1,22 +1,22 @@
 Vue.component('new-recording', {
-	props: [ 'gettingTextSamples', 'processing', 'textSamples' ],
+	props: [ 'gettingTextSamples', 'processingNewRecording', 'textSamples' ],
 	template: `<div>
 		<div v-if='!browserSupportsRecording'>This browser does not support audio recording.</div>
 		<div v-else-if='mediaRecorder'>
 			<div>
-				<button @click='prevTextSample'><</button>
-				<button @click='nextTextSample'>></button>
-				<p v-html='activeTextSample.text'></p>
+				<button @click='prevTextSample' :disabled='disableTextSampleControls'><</button>
+				<button @click='getNewTextSamples' :disabled='disableTextSampleControls'>New Phrases</button>
+				<button @click='nextTextSample' :disabled='disableTextSampleControls'>></button>
+				<pre v-html='activeTextSample.text' class='sample-text''></pre>
 			</div>
-			<button @click='toggleRecording' :class='recordingClass'>&#9899</button>
+			<button @click='beginRecording' v-show='!listening' :disabled='disableRecordingControls'>Record</button>
+			<button @click='endRecording' v-show='listening' :disabled='disableRecordingControls'>Stop</button>
 			<div v-if='audioSrc'>
 				<audio :src='audioSrc' controls></audio>
-				<div v-html='name'></div>
 			</div>
 		</div>
 	</div>`,
 	created: function() {
-		console.log(navigator.mediaDevices);
 		if (this.browserSupportsRecording) {
 			this.initMediaDevices();
 			this.nextTextSample();
@@ -27,25 +27,20 @@ Vue.component('new-recording', {
 			activeTextSample: null,
 			listening: false,
 			audioSrc: '',
-			name: '',
 			timeout: null,
 			maxTime: 30000,
 			mediaRecorder: null,
 			chunks: [],
 			constraints: {
 				audio: true
-			}
+			},
 		};
 	},
 	computed: {
 		mediaDevices: function() { return navigator.mediaDevices; },
 		browserSupportsRecording: function() { return this.mediaDevices; },
-		recordingClass: function() {
-			return {
-				'begin-recording': !this.listening,
-				'end-recording': this.listening
-			};
-		}
+		disableTextSampleControls: function() { return this.listening || this.processingNewRecording || this.gettingTextSamples; },
+		disableRecordingControls: function() { return this.gettingTextSamples; }
 	},
 	methods: {
 		initMediaDevices: function() {
@@ -55,15 +50,7 @@ Vue.component('new-recording', {
 				mediaRecorder = new MediaRecorder(stream);
 
 				mediaRecorder.onstop = (e) => {
-					this.name = this.generateClipName();
-					this.audioSrc = URL.createObjectURL(new Blob(this.chunks, { type: 'audio/ogg; codecs=opus' }));
-					this.chunks = [];
-					this.listening = false;
-					this.$emit('new-recording', {
-						blob: new Blob(this.chunks, { type: 'text/plain'}),
-						name: this.name,
-						text_sample_id: this.activeTextSample.id
-					});
+					this.newRecording();
 				};
 
 				mediaRecorder.ondataavailable = (e) => {
@@ -83,12 +70,13 @@ Vue.component('new-recording', {
 			this.setActiveTextSample(this.textSamples.indexOf(this.activeTextSample) - 1);
 		},
 		setActiveTextSample: function(i) {
+			if (this.listening) return;
 			if (this.textSamples.length < 1) {
 				this.activeTextSample = {
 					id: null,
 					text: 'No text samples were found. Searching for new text samples...'
 				};
-				this.$emit('get-new-text-samples');
+				this.getNewTextSamples();
 			}
 			else {
 				if (i >= this.textSamples.length) i = 0;
@@ -96,8 +84,9 @@ Vue.component('new-recording', {
 				this.activeTextSample = this.textSamples[i];
 			}
 		},
-		toggleRecording: function() {
-			this.mediaRecorder.state == 'recording' ? this.endRecording() : this.beginRecording();
+		getNewTextSamples: function() {
+			if (this.listening) return;
+			this.$emit('get-new-text-samples');
 		},
 		endRecording: function() {
 			clearTimeout(this.timeout);
@@ -105,8 +94,8 @@ Vue.component('new-recording', {
 			this.mediaRecorder.stop();
 		},
 		beginRecording: function() {
+			if (this.timeout) return;
 			this.audioSrc = '';
-			this.name = '';
 			this.chunks = [];
 			this.mediaRecorder.start();
 			this.listening = true;
@@ -114,17 +103,18 @@ Vue.component('new-recording', {
 				this.endRecording();
 			}, this.maxTime);
 		},
-		generateClipName: function() {
-			let date = new Date();
-			let month = date.toLocaleString('default', { month: 'short' });
-			let day = date.getDate();
-			let year = date.getFullYear();
-			let dateString = month + ' ' + day + ', ' + year;
-			let hour = date.getHours();
-			let minute = date.getMinutes();
-			let second = date.getSeconds();
-			let timeString = hour + ':' + minute + ':' + second;
-			return dateString + ' ' + timeString;
+		newRecording: function() {
+			let blob = new Blob(this.chunks, { type: 'audio/ogg; codecs=opus' });
+
+			this.audioSrc = URL.createObjectURL(blob);
+			this.chunks = [];
+			this.listening = false;
+					
+			this.$emit('new-recording', {
+				blob: blob,
+				filename: '__' + Math.floor((new Date()).getTime() / 1000) + '__.ogg',
+				text_sample_id: this.activeTextSample.id
+			});
 		}
 	}
 });

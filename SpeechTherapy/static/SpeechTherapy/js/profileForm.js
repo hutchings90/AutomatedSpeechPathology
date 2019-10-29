@@ -1,6 +1,6 @@
 Vue.component('profile-form', {
-	props: [ 'user', 'processing', 'submitText', 'action', 'showEmail', 'leftExtra', 'rightExtra', 'preventSubmission' ],
-	template: `<div class='form-container'>
+	props: [ 'user', 'processing', 'submitText', 'action', 'showEmail', 'leftExtra', 'rightExtra' ],
+	template: `<div>
 		<form @submit='submit($event)' :action='action' method='POST'>
 			<div>
 				<label>Username <span class='required'>*</span></label>
@@ -17,7 +17,7 @@ Vue.component('profile-form', {
 				<br>
 				<input name='email' v-model.lazy='user.email' @change='updateAttr("email")' type='email'/>
 			</div>
-			<button v-if='submitText' v-html='submitText' @click='submitButtonClicked' :disabled='processing'></button>
+			<button v-if='submitText' v-html='submitText' :disabled='processing'></button>
 		</form>
 		<div v-if='leftExtra || rightExtra' class='extra-links'>
 			<a v-if='leftExtra' v-html='leftExtra' @click='leftExtraClicked' class='left'></a>
@@ -29,12 +29,7 @@ Vue.component('profile-form', {
 			this.$emit('update-attr', attr);
 		},
 		submit: function(e) {
-			if (this.preventSubmission) e.preventDefault();
-
 			this.$emit('submit', e);
-		},
-		submitButtonClicked: function() {
-			this.$emit('submit-button-clicked');
 		},
 		leftExtraClicked: function() {
 			this.$emit('left-extra-clicked');

@@ -5,12 +5,10 @@ from django.utils import timezone
 from calendar import month_abbr
 import re
 
-def defaultDateTime():
-	return re.sub(' 0+', ' ', timezone.now().strftime('%b %d, %Y %H:%M:%S'))
-
-
 class TextSample(models.Model):
-	text = models.TextField()
+	expected_time = models.IntegerField(null=False, blank=False)
+	name = models.TextField(null=False, blank=False, unique=True)
+	text = models.TextField(null=False, blank=False, unique=True)
 
 
 class Recording(models.Model):
@@ -20,14 +18,13 @@ class Recording(models.Model):
 	audio = models.FileField(upload_to='audio/%Y/%m/%d/')
 	interpretation = models.TextField()
 	score = models.DecimalField(max_digits=3, decimal_places=2)
-	name = models.CharField(max_length=32, default=defaultDateTime)
 
 	def data(self):
 		return {
-			'date_recorded': int(self.date_recorded.timestamp()),
-			'text_sample': self.text_sample.text,
-			# 'audio': self.audio,
+			'date_recorded': int(self.date_recorded.timestamp() * 1000),
+			'text': self.text_sample.text,
+			'name': self.text_sample.name,
+			'audioSrc': self.audio.url,
 			'interpretation': self.interpretation,
-			'score': float(self.score),
-			'name': self.name
+			'score': float(self.score)
 		}

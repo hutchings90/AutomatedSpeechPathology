@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.middleware import csrf
 
 from datetime import datetime
 import json
@@ -19,16 +20,23 @@ def getUserData(user):
 		'email': user.email
 	}
 
-def getUsersRecordingsData(user):
+def getUsersRecordingsData(user, page=1, recordsPerPage=10):
 	recordings = []
 
-	for recording in Recording.objects.filter(user_id=user.id).reverse()[:100:1]:
-		recordings.append(recording.data())
+	if Recording.objects.filter(user_id=user.id).count():
+		start = (page - 1) * recordsPerPage
+		end = page * recordsPerPage
+
+		for recording in Recording.objects.filter(user_id=user.id).reverse()[start:end:1]:
+			recordings.append(recording.data())
 
 	return recordings
 
 def getTextSampleData(id=0):
 	return TextSample.objects.filter(id__gt=id).values()[:10:1]
+
+def getRecordingCount(user):
+	return Recording.objects.filter(user_id=user.id).count()
 
 def index(request):
 	if request.user.is_authenticated:
@@ -45,21 +53,26 @@ def index(request):
 
 def signUp(request):
 	post = request.POST
+
 	username = post.get('username')
 	email = post.get('email')
 	password = post.get('password')
 
-	user = User.objects.create_user(username, email=email, password=password)
-	user.save()
+	try:
+		user = User.objects.create_user(username, email=email, password=password)
+		user.save()
 
-	login(request, user)
+		login(request, user)
+	except:
+		return HttpResponseRedirect('/SpeechTherapy')
 
 	return HttpResponseRedirect('/SpeechTherapy/dashboard')
 
 def signIn(request):
 	post = request.POST
-	username = request.POST.get('username')
-	password = request.POST.get('password')
+
+	username = post.get('username')
+	password = post.get('password')
 
 	user = authenticate(username=username, password=password)
 
@@ -81,16 +94,20 @@ def dashboard(request):
 			'textSamples': getTextSampleData(),
 			'user': getUserData(user),
 			'recordings': getUsersRecordingsData(user),
-			'activeTab': 'newRecording',
+			'recordingCount': getRecordingCount(user),
+			'recording': None,
+			'activeTab': 'resultsHistory',
 			'signingOut': False,
 			'gettingTextSamples': False,
-			'processingNewRecording': False
+			'gettingRecordings': False,
+			'processingNewRecording': False,
+			'recordedSinceGetRecordings': False
 		})
 	})
 
 def getTextSamples(request):
 	return HttpResponse(json.dumps({
-		'textSamples': []
+		'textSamples': getTextSampleData()
 	}));
 
 def signOut(request):
@@ -102,10 +119,11 @@ def updateUser(request):
 	if not request.user.is_authenticated:
 		return HttpResponseNotFound('User not found.')
 
-	user = request.user if request.user.is_authenticated else User()
-	body = json.loads(request.body)
-	attr = body['attr']
-	value = body['value']
+	user = request.user
+	post = request.POST
+
+	attr = post.get('attr')
+	value = post.get('value')
 
 	if attr == 'password':
 		user.set_password(value)
@@ -114,18 +132,39 @@ def updateUser(request):
 
 	user.save()
 
-	return HttpResponse(json.dumps(getUserData(user)))
+	if attr == 'password':
+		login(request, authenticate(username=user.username, password=user.password))
+
+	return HttpResponse(json.dumps(csrf.get_token(request)))
+
+def getRecordings(request):
+	post = request.POST
+
+	page = int(post.get('page'))
+	recordsPerPage = int(post.get('recordsPerPage'))
+
+	return HttpResponse(json.dumps({
+		'recordings': getUsersRecordingsData(request.user, page, recordsPerPage)
+	}))
 
 def newRecording(request):
-	body = json.loads(request.body)
+	user = request.user
+	post = request.POST
+	files = request.FILES
+
+	text_sample_id = post.get('text_sample_id')
+	audio = files.get('audio')
 
 	recording = Recording()
 	recording.date_recorded = datetime.now()
-	recording.user = request.user
-	recording.text_sample = TextSample.objects.get(pk=body['text_sample_id'])
+	recording.user = user
+	recording.audio = audio
+	recording.text_sample = TextSample.objects.get(pk=text_sample_id)
+	recording.interpretation = recording.text_sample.text
 	recording.score = 0
 	recording.save()
 
 	return HttpResponse(json.dumps({
-		'recording': recording.data()
+		'recording': recording.data(),
+		'recordingCount': getRecordingCount(user)
 	}))
