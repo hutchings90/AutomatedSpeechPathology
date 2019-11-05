@@ -20,13 +20,17 @@
 	</div>
 	<div id='tab-content'>
 		<template v-if='signedIn'>
+			<div v-show='showBrowserRecordingSupportError'>This browser does not support audio recording.</div>
 			<new-recording
+				v-if='browserSupportsRecording'
 				v-show='activeTab == "newRecording"'
 				@get-new-text-samples='getNewTextSamples'
 				@new-recording='newRecording'
+				:active='activeTab == "newRecording"'
 				:getting-text-samples='gettingTextSamples'
 				:processing-new-recording='processingNewRecording'
-				:text-samples='textSamples'></new-recording>
+				:text-samples='textSamples'
+				:media-devices='mediaDevices'></new-recording>
 			<recordings
 				v-show='activeTab == "resultsHistory"'
 				@get-recordings='getRecordings'
@@ -74,25 +78,10 @@
 new Vue({
 	el: '#speech-therapy-app',
 	data: JSON.parse('{{ data | escapejs }}'),
-	created: function() {
-		// TODO: Testing google Speech-to-Text API. To be removed once finished testing.
-		// this.sendRequest('https://speech.googleapis.com/v1/speech:recognize', null, [{
-		// 	key: 'config',
-		// 	value: {
-		// 		encoding: 'OGG_OPUS',
-		// 		sampleRateHertz: 8000,
-		// 		languageCode: 'en-US'
-		// 	}
-		// }, {
-		// 	key: 'audio',
-		// 	value: new Blob([], { type: 'audio/ogg; codecs=opus' })
-		// }], (response) => {
-		// 	console.log(response);
-		// }, (response) => {
-		// 	console.log(response);
-		// });
-	},
 	computed: {
+		mediaDevices: function() { return navigator.mediaDevices; },
+		browserSupportsRecording: function() { return this.mediaDevices; },
+		showBrowserRecordingSupportError: function() { return !this.browserSupportsRecording && this.activeTab == "newRecording"; },
 		signedIn: function() { return this.user.id; },
 		hasRecordings: function() { return this.recordingCount > 0; },
 		resultsHistoryClass: function() {
@@ -212,13 +201,23 @@ new Vue({
 			this.sendRequest('{% url "updateUser" %}', null, [{
 				key: 'attr',
 				value: attr
-			},  {
+			}, {
 				key: 'value',
 				value: this.user[attr],
 			}], (response) => {
 				this.csrfToken = response.csrfToken;
 			}, (response, status) => {
 				// TODO: Display update error
+			});
+		},
+		importTextSamples: function(directoryName) {
+			this.sendRequest('{% url "importTextSamples" %}', null, [{
+				key: 'directoryName',
+				value: directoryName
+			}], (response) => {
+				// TODO: Display completion of text sample import.
+			}, (response, status) => {
+				// TODO: Display import error
 			});
 		},
 		sendRequest: function(url, processFlag, data, onSuccess, onError) {

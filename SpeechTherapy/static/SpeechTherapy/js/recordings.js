@@ -9,7 +9,7 @@ Vue.component('recordings', {
 				<input v-model.number='activePageNumber' :value='pageNumber' type='radio' class='hide'/>
 				<span v-html='pageNumber'></span>
 			</label>
-			<div v-show='showResultsPerPageInput'>
+			<div v-show='showResultsPerPageInput' class='results-per-page-input'>
 				<label>Results per page:</label>
 				<input v-model.number.lazy='recordsPerPage' type='number' min='10' class='records-per-page'/>
 			</div>

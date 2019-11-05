@@ -27,7 +27,7 @@ def getUsersRecordingsData(user, page=1, recordsPerPage=10):
 		start = (page - 1) * recordsPerPage
 		end = page * recordsPerPage
 
-		for recording in Recording.objects.filter(user_id=user.id).reverse()[start:end:1]:
+		for recording in Recording.objects.order_by('-date_recorded').filter(user_id=user.id)[start:end:1]:
 			recordings.append(recording.data())
 
 	return recordings
@@ -48,7 +48,7 @@ def index(request):
 	else:
 		user = request.user
 		textSamples = getTextSampleData()
-		activeTab = 'resultsHistory'
+		activeTab = 'newRecording'
 
 	return render(request, 'SpeechTherapy/index.html', {
 		'data': json.dumps({
@@ -65,6 +65,7 @@ def index(request):
 			'processingNewRecording': False,
 			'recordedSinceGetRecordings': False,
 			'recording': None,
+			'importingTextSamples': False,
 			'csrfToken': csrf.get_token(request)
 		})
 	})
@@ -181,3 +182,11 @@ def newRecording(request):
 		'recording': recording.data(),
 		'recordingCount': getRecordingCount(user)
 	}))
+
+def importTextSamples(request):
+	if not request.user.is_superuser:
+		return HttpResponse()
+
+	post = request.POST
+	directoryName = post.get('directoryName')
+	return HttpResponse(directoryName);

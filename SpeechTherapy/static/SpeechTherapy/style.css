@@ -50,6 +50,10 @@
 	display: inline-block;
 }
 
+.new-recording-prompt {
+	display: inline-block;
+}
+
 .extra-links > a {
 	cursor: pointer;
 	font-size: 14px;
@@ -172,6 +176,10 @@
 	display: none;
 }
 
+.results-per-page-input {
+	margin: 10px 0;
+}
+
 body {
 	margin: 10px;
 }
@@ -186,5 +194,12 @@ form {
 
 form > div {
 	text-align: left;
+	margin-bottom: 20px;
+}
+
+canvas {
+	background: black;
+	width: 80%;
+	height: 100px;
 	margin-bottom: 20px;
 }
