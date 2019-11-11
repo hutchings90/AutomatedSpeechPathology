@@ -3,9 +3,23 @@
 <link rel="stylesheet" type="text/css" href="{% static 'SpeechTherapy/style.css' %}"/>
 
 <script src="{% static 'SpeechTherapy/js/vue.js' %}"></script>
-<script src="{% static 'SpeechTherapy/js/profileForm.js' %}"></script><script src='{% static "SpeechTherapy/js/newRecording.js" %}'></script>
+<script src="{% static 'SpeechTherapy/js/profileForm.js' %}"></script>
+<script src='{% static "SpeechTherapy/js/newRecording.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/recording.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/recordings.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/XHR.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/SpeechTherapyRequester.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/UpSigner.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/OutSigner.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/InSigner.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/ProfileUpdater.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/SpeechToText.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/MicrosoftCognitiveServices.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/NewRecordingTranslator.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/RecordingUploader.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/NewTextSamplesGetter.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/RecordingsGetter.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/TextSamplesImporter.js" %}'></script>
 
 <title>Automated Speech Therapy</title>
 
@@ -25,10 +39,10 @@
 				v-if='browserSupportsRecording'
 				v-show='activeTab == "newRecording"'
 				@get-new-text-samples='getNewTextSamples'
-				@new-recording='newRecording'
+				@new-recording='handleNewRecording'
 				:active='activeTab == "newRecording"'
 				:getting-text-samples='gettingTextSamples'
-				:processing-new-recording='processingNewRecording'
+				:processing='processingNewRecording'
 				:text-samples='textSamples'
 				:media-devices='mediaDevices'></new-recording>
 			<recordings
@@ -78,16 +92,104 @@
 new Vue({
 	el: '#speech-therapy-app',
 	data: JSON.parse('{{ data | escapejs }}'),
+	created: function() {
+		let csrfToken = '{{ csrfToken }}';
+		this.upSigner = new UpSigner(csrfToken, {
+			url: '{% url "signUp" %}',
+			onSuccess: (response) => {
+				this.onSignUpSuccess(response);
+			},
+			onError: (response, status) => {
+				// TODO: Display sign in error
+			}
+		});
+		this.outSigner = new OutSigner(csrfToken, {
+			url: '{% url "signOut" %}',
+			onSuccess: (response) => {
+				this.onSignOutSuccess(response);
+			},
+			onError: (response, status) => {
+				// TODO: Display sign out error
+			}
+		});
+		this.inSigner = new InSigner(csrfToken, {
+			url: '{% url "signIn" %}',
+			onSuccess: (response) => {
+				this.onSignInSuccess(response);
+			},
+			onError: (response, status) => {
+				// TODO: Display sign up error
+			}
+		});
+		this.profileUpdater = new ProfileUpdater(csrfToken, {
+			url: '{% url "updateUser" %}',
+			onSuccess: (response) => {
+				this.onUpdateUserSuccess(response);
+			},
+			onError: (response, status) => {
+				// TODO: Display update error
+			}
+		});
+		this.newRecordingTranslator = new NewRecordingTranslator((data) => {
+			this.saveNewRecording(data);
+		});
+		this.newRecordingUploader = new RecordingUploader(csrfToken, {
+			url: '{% url "newRecording" %}',
+			onSuccess: (response) => {
+				this.onNewRecordingSuccess(response);
+			},
+			onError: (response, status) => {
+				// TODO: Display new recording error
+			}
+		});
+		this.newTextSamplesGetter = new NewTextSamplesGetter(csrfToken, {
+			url: '{% url "getTextSamples" %}',
+			onSuccess: (response) => {
+				this.onGetNewTextSampleSuccess(response);
+			},
+			onError: (response, status) => {
+				// TODO: Display new recording error
+			}
+		});
+		this.recordingsGetter = new RecordingsGetter(csrfToken, {
+			url: '{% url "getRecordings" %}',
+			onSuccess: (response) => {
+				this.onGetRecordingSuccess(response);
+			},
+			onError: (response, status) => {
+				// TODO: Display get recordings error
+			}
+		});
+		// TODO: Implement textSamplesImporter for admin users
+		this.textSamplesImporter = new TextSamplesImporter(csrfToken, {
+			url: '{% url "importTextSamples" %}',
+			onSuccess: (response) => {
+				// TODO: Display completion of text sample import.
+			},
+			onError: (response, status) => {
+				// TODO: Display import error
+			}
+		});
+	},
 	computed: {
 		mediaDevices: function() { return navigator.mediaDevices; },
 		browserSupportsRecording: function() { return this.mediaDevices; },
 		showBrowserRecordingSupportError: function() { return !this.browserSupportsRecording && this.activeTab == "newRecording"; },
 		signedIn: function() { return this.user.id; },
 		hasRecordings: function() { return this.recordingCount > 0; },
+		processingNewRecording: function() { return this.savingNewRecording || this.gettingToken || this.interpretingRecording; },
 		resultsHistoryClass: function() {
 			let resultsHistoryClass = this.headerClass("resultsHistory");
 			resultsHistoryClass.disabled = !this.hasRecordings;
 			return resultsHistoryClass;
+		},
+		maxTextSampleId: function() {
+			let max = 0;
+			for (var i = this.textSamples.length - 1; i >= 0; i--) {
+				let id = this.textSamples[i].id;
+				if (id > max) max = id;
+			}
+			return max;
 		}
 	},
 	methods: {
@@ -104,152 +206,83 @@ new Vue({
 			this.activateTab("resultsHistory");
 		},
 		signUp: function() {
-			this.sendRequest('{% url "signUp" %}', 'signingUp', [{
-				key: 'username',
-				value: this.user.username
-			}, {
-				key: 'password',
-				value: this.user.password
-			}], (response) => {
-				this.user = response.user;
-				this.recordings = response.recordings;
-				this.recordingCount = response.recordingCount;
-				this.textSamples = response.textSamples
-				this.csrfToken = response.csrfToken;
-				this.activateTab('newRecording')
-			}, (response, status) => {
-				// TODO: Display sign in error
-			});
+			this.upSigner.submit(this.user);
 		},
 		signIn: function() {
-			this.sendRequest('{% url "signIn" %}', 'signingIn', [{
-				key: 'username',
-				value: this.user.username
-			}, {
-				key: 'password',
-				value: this.user.password
-			}], (response) => {
-				this.user = response.user;
-				this.recordings = response.recordings;
-				this.recordingCount = response.recordingCount;
-				this.textSamples = response.textSamples
-				this.csrfToken = response.csrfToken;
-				this.activateTab('newRecording')
-			}, (response, status) => {
-				// TODO: Display sign up error
-			});
+			this.inSigner.submit(this.user.username, this.user.password);
 		},
 		forgotPassword: function() {
 			// TODO: Implement forgot password
 		},
 		signOut: function() {
-			this.sendRequest('{% url "signOut" %}', 'signingOut', [], (response) => {
-				this.user = response.user;
-				this.recordings = [];
-				this.recordingCount = 0;
-				this.textSamples = [];
-				this.csrfToken = response.csrfToken;
-				this.activateTab('signIn')
-			}, (response, status) => {
-				// TODO: Display sign out error
-			});
+			this.outSigner.submit();
 		},
-		getNewTextSamples: function(data) {
-			this.sendRequest('{% url "getTextSamples" %}', 'gettingTextSamples', [{
-				key: 'textSamples',
-				value: this.textSamples
-			}], (response) => {
-				this.textSamples = response.textSamples;
-			}, (response, status) => {
-				// TODO: Display new recording error
-			});
+		getNewTextSamples: function() {
+			this.newTextSamplesGetter.submit(this.maxTextSampleId);
 		},
 		getRecordings: function(data) {
-			this.sendRequest('{% url "getRecordings" %}', 'gettingRecordings', [{
-				key: 'page',
-				value: data.page
-			}, {
-				key: 'recordsPerPage',
-				value: data.recordsPerPage
-			}], (response) => {
-				this.recordedSinceGetRecordings = false;
-				this.recordings = response.recordings;
-			}, (response, status) => {
-				// TODO: Display get recordings error
-			});
-		},
-		newRecording: function(data) {
-			// TODO: send actual recording
-			this.sendRequest('{% url "newRecording" %}', 'processingNewRecording', [{
-				key: 'audio',
-				value: data.blob,
-				filename: data.filename
-			}, {
-				key: 'text_sample_id',
-				value: data['text_sample_id']
-			}], (response) => {
-				this.recordedSinceGetRecordings = true;
-				this.recording = response.recording;
-				this.recordingCount = response.recordingCount;
-				this.recordings = [];
-			}, (response, status) => {
-				// TODO: Display new recording error
-				window.open().document.write(response);
-			});
+			this.recordingsGetter.submit(data.page, data.recordsPerPage);
 		},
 		updateUser: function(attr) {
-			this.sendRequest('{% url "updateUser" %}', null, [{
-				key: 'attr',
-				value: attr
-			}, {
-				key: 'value',
-				value: this.user[attr],
-			}], (response) => {
-				this.csrfToken = response.csrfToken;
-			}, (response, status) => {
-				// TODO: Display update error
-			});
+			this.profileUpdater.submit(attr, this.user[attr]);
 		},
 		importTextSamples: function(directoryName) {
-			this.sendRequest('{% url "importTextSamples" %}', null, [{
-				key: 'directoryName',
-				value: directoryName
-			}], (response) => {
-				// TODO: Display completion of text sample import.
-			}, (response, status) => {
-				// TODO: Display import error
-			});
+			this.textSamplesImporter.submit(directoryName);
 		},
-		sendRequest: function(url, processFlag, data, onSuccess, onError) {
-			if (this[processFlag]) {
-				// TODO: Display duplicate attempt error
-				return;
-			}
-			let request = new XMLHttpRequest();
-			request.open('POST', url);
-			request.setRequestHeader('X-CSRFToken', this.csrfToken);
-			request.withCredentials = true;
-			request.onreadystatechange = () => {
-				if (request.readyState == 4) {
-					if (request.status == 200) {
-						if (onSuccess) onSuccess(JSON.parse(request.responseText));
-					}
-					else if (onError) onError(request.responseText, request.status);
-					if (processFlag) this[processFlag] = false;
-				}
-			};
-			if (processFlag) this[processFlag] = true;
-			request.send(this.JSONToFormData(data));
+		handleNewRecording: function(data) {
+			this.newRecordingTranslator.submit(data);
 		},
-		JSONToFormData: function(items) {
-			let formData = new FormData();
-			for (let i = 0; i < items.length; i++) {
-				let item = items[i];
-				let filename = item.filename;
-				if (filename) formData.append(item.key, item.value, item.filename);
-				else formData.append(item.key, item.value);
-			}
-			return formData;
+		saveNewRecording: function(data) {
+			this.newRecordingUploader.submit(data);
+		},
+		updateCSRFToken: function(csrfToken) {
+			this.upSigner.updateCSRFToken(csrfToken);
+			this.outSigner.updateCSRFToken(csrfToken);
+			this.inSigner.updateCSRFToken(csrfToken);
+			this.profileUpdater.updateCSRFToken(csrfToken);
+			this.newRecordingUploader.updateCSRFToken(csrfToken);
+			this.newTextSamplesGetter.updateCSRFToken(csrfToken);
+			this.recordingsGetter.updateCSRFToken(csrfToken);
+		},
+		onSignUpSuccess: function(response) {
+			this.user = response.user;
+			this.recordings = response.recordings;
+			this.recordingCount = response.recordingCount;
+			this.textSamples = response.textSamples;
+			this.updateCSRFToken(response.csrfToken);
+			this.activateTab('newRecording');
+		},
+		onSignOutSuccess: function(response) {
+			this.user = response.user;
+			this.recordings = [];
+			this.recordingCount = 0;
+			this.textSamples = [];
+			this.updateCSRFToken(response.csrfToken);
+			this.activateTab('signIn');
+		},
+		onSignInSuccess: function(response) {
+			this.user = response.user;
+			this.recordings = response.recordings;
+			this.recordingCount = response.recordingCount;
+			this.textSamples = response.textSamples;
+			this.updateCSRFToken(response.csrfToken);
+			this.activateTab('newRecording');
+		},
+		onUpdateUserSuccess: function(response) {
+			this.updateCSRFToken(response.csrfToken);
+		},
+		onNewRecordingSuccess: function(response) {
+			this.recordedSinceGetRecordings = true;
+			this.recording = response.recording;
+			this.recordingCount = response.recordingCount;
+			this.recordings = [];
+		},
+		onGetNewTextSampleSuccess: function(response) {
+			this.textSamples = response.textSamples;
+		},
+		onGetRecordingSuccess: function(response) {
+			this.recordedSinceGetRecordings = false;
+			this.recordings = response.recordings;
 		}
 	}
 });

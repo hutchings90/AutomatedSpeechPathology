@@ -1,5 +1,5 @@
 Vue.component('new-recording', {
-	props: [ 'active', 'gettingTextSamples', 'processingNewRecording', 'textSamples', 'mediaDevices' ],
+	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples', 'mediaDevices' ],
 	template: `<div>
 		<div class='viz'>
 			<canvas ref='analyser' width='1024' height='500'></canvas>
@@ -13,7 +13,7 @@ Vue.component('new-recording', {
 			</div>
 			<button @click='beginRecording' v-show='!listening' :disabled='disableRecordingControls'>Record</button>
 			<button @click='endRecording' v-show='listening' :disabled='disableRecordingControls'>Stop</button>
-			<div v-show='audioSrc'>
+			<div v-show='showAudio'>
 				<audio ref='newRecording' :src='audioSrc' controls></audio>
 			</div>
 		</div>
@@ -44,7 +44,8 @@ Vue.component('new-recording', {
 		};
 	},
 	computed: {
-		disableTextSampleControls: function() { return this.listening || this.processingNewRecording || this.gettingTextSamples; },
+		disableTextSampleControls: function() { return this.listening || this.processing || this.gettingTextSamples; },
+		showAudio: function() { return this.audioSrc && !this.disableTextSampleControls; },
 		disableRecordingControls: function() { return this.gettingTextSamples; },
 		canvas: function() { return this.$refs.analyser; },
 		numBars: function() { return Math.round(this.canvas.width / this.spacing); },
@@ -54,6 +55,9 @@ Vue.component('new-recording', {
 		active: function() {
 			if (this.active) this.activate();
 			else this.deactivate();
+		},
+		processing: function() {
+			console.log('processing', this.processing);
 		}
 	},
 	methods: {
@@ -107,6 +111,7 @@ Vue.component('new-recording', {
 		},
 		newRecording: function() {
 			let blob = new Blob(this.chunks, { type: 'audio/ogg; codecs=opus' });
+			blob.name = Math.floor((new Date()).getTime() / 1000);
 
 			this.audioSrc = URL.createObjectURL(blob);
 			this.chunks = [];
@@ -114,7 +119,6 @@ Vue.component('new-recording', {
 					
 			this.$emit('new-recording', {
 				blob: blob,
-				filename: '__' + Math.floor((new Date()).getTime() / 1000) + '__.ogg',
 				text_sample_id: this.activeTextSample.id
 			});
 		},

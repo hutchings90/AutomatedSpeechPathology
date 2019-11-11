@@ -32,8 +32,12 @@ def getUsersRecordingsData(user, page=1, recordsPerPage=10):
 
 	return recordings
 
-def getTextSampleData(id=0):
-	return TextSample.objects.filter(id__gt=id).values()[:10:1]
+def getTextSampleData(id=0, limit=10):
+	textSamples = TextSample.objects.filter(id__gt=id).values()[:limit:1]
+	underflow = limit - len(textSamples)
+	if underflow > 0:
+		textSamples += TextSample.objects.filter(id__lte=id).values()[:underflow:1]
+	return textSamples
 
 def getRecordingCount(user):
 	return Recording.objects.filter(user_id=user.id).count()
@@ -62,12 +66,14 @@ def index(request):
 			'signingOut': False,
 			'gettingTextSamples': False,
 			'gettingRecordings': False,
-			'processingNewRecording': False,
+			'gettingToken': False,
+			'interpretingRecording': False,
+			'savingNewRecording': False,
 			'recordedSinceGetRecordings': False,
 			'recording': None,
 			'importingTextSamples': False,
-			'csrfToken': csrf.get_token(request)
-		})
+		}),
+		'csrfToken': csrf.get_token(request)
 	})
 
 def signUp(request):
@@ -113,7 +119,7 @@ def signIn(request):
 
 def getTextSamples(request):
 	return HttpResponse(json.dumps({
-		'textSamples': getTextSampleData()
+		'textSamples': getTextSampleData(request.POST.get('id'))
 	}));
 
 def signOut(request):
@@ -168,13 +174,14 @@ def newRecording(request):
 
 	text_sample_id = post.get('text_sample_id')
 	audio = files.get('audio')
+	interpretation = post.get('interpretation')
 
 	recording = Recording()
 	recording.date_recorded = datetime.now()
 	recording.user = user
 	recording.audio = audio
 	recording.text_sample = TextSample.objects.get(pk=text_sample_id)
-	recording.interpretation = recording.text_sample.text
+	recording.interpretation = interpretation
 	recording.score = 0
 	recording.save()
 
