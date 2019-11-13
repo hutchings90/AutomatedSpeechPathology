@@ -27,11 +27,9 @@ Vue.component('recordings', {
 			<tbody>
 				<recording
 					v-for='recording in recordings'
-					@set-sample-text-recording='setSampleTextRecording'
 					@play-recording='setAudioRecording'
 					:key='recording.id'
 					:recording='recording'
-					:sample-text-recording='sampleTextRecording'
 					:audio-recording='audioRecording'></recording>
 			</tbody>
 		</table>
@@ -67,14 +65,10 @@ Vue.component('recordings', {
 		recordsPerPage: function() {
 			if (this.recordsPerPage < 10) this.recordsPerPage = 10;
 			else this.getRecordings();
-		},
-		recordings: function() {
-			this.setSampleTextRecording(null);
 		}
 	},
 	methods: {
 		resetRecordings: function() {
-			this.setSampleTextRecording();
 			this.setAudioRecording();
 			if (!this.shown || !this.recordedSinceGetRecordings) return;
 			this.activePageNumber = 1;
@@ -86,9 +80,6 @@ Vue.component('recordings', {
 				page: this.activePageNumber,
 				recordsPerPage: this.recordsPerPage
 			});
-		},
-		setSampleTextRecording: function(recording) {
-			this.sampleTextRecording = recording;
 		},
 		setAudioRecording: function(recording) {
 			this.audioRecording = recording;

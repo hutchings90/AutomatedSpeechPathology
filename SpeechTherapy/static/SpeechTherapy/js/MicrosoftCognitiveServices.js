@@ -1,5 +1,5 @@
 class MicrosoftCognitiveServices extends SpeechToText {
-	constructor(subscriptionKey, tokenUrl, speechToTextUrl, onSaveNewRecording) {
+	constructor(subscriptionKey, tokenUrl, speechToTextUrl, onSaveNewRecording, onComplete) {
 		super(onSaveNewRecording);
 		this.issueTokenXHR = new XHR({
 			url: tokenUrl,
@@ -10,9 +10,11 @@ class MicrosoftCognitiveServices extends SpeechToText {
 				this.getTextFromRecording(response);
 			},
 			onError: (response, status) => {
-				this.data = null;
+				// Call onComplete since it won't get called by speechToTextXHR's onComplete
+				this.onComplete(response);
 				// TODO: Display get token error.
 			}
+			// Don't set onComplete since it isn't complete until the speechToTextXHR's onComplete
 		});
 		this.speechToTextXHR = new XHR({
 			url: speechToTextUrl,
@@ -27,16 +29,14 @@ class MicrosoftCognitiveServices extends SpeechToText {
 				// TODO: Display speech-to-text error.
 			},
 			onComplete: (response) => {
-				this.data = null;
+				this.onComplete(response);
 			}
 		});
 	}
 
 	submit(data) {
 		this.data = data;
-		// TODO: Remove call to saveNewRecording and uncomment call to issueTokenXHR.submit once speech-to-text working.
-		this.saveNewRecording('asdf');
-		// this.issueTokenXHR.submit();
+		this.issueTokenXHR.submit();
 	}
 
 	getTextFromRecording(token) {

@@ -64,11 +64,11 @@ def index(request):
 			'signingIn': False,
 			'signingUp': False,
 			'signingOut': False,
+			'updatingProfile': False,
 			'gettingTextSamples': False,
 			'gettingRecordings': False,
-			'gettingToken': False,
 			'interpretingRecording': False,
-			'savingNewRecording': False,
+			'uploadingNewRecording': False,
 			'recordedSinceGetRecordings': False,
 			'recording': None,
 			'importingTextSamples': False,
@@ -182,7 +182,7 @@ def newRecording(request):
 	recording.audio = audio
 	recording.text_sample = TextSample.objects.get(pk=text_sample_id)
 	recording.interpretation = interpretation
-	recording.score = 0
+	recording.assignScore()
 	recording.save()
 
 	return HttpResponse(json.dumps({

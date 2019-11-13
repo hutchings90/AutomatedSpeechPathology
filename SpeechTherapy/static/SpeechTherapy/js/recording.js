@@ -1,5 +1,5 @@
 Vue.component('recording', {
-	props: [ 'recording', 'sampleTextRecording', 'audioRecording' ],
+	props: [ 'recording', 'audioRecording' ],
 	template: `<tr>
 		<td class='audio-controls'>
 			<label class='checkbox-button'>
@@ -12,16 +12,13 @@ Vue.component('recording', {
 			<div v-html='dateDisplay'></div>
 			<div v-html='timeDisplay'></div>
 		</td>
-		<td v-show='!showSampleText' @click='setSampleTextRecording(recording)' class='recording-name'>
-			<span v-html='recording.name'></span>
-		</td>
-		<td v-show='showSampleText' @click='setSampleTextRecording' class='recording-text'>
-			<div class='info-container'>
-				<pre v-html='recording.text' class='sample-text info-content'></pre>
+		<td>
+			<div>
+				<pre v-html='recording.text' class='sample-text'></pre>
 			</div>
 		</td>
 		<td>
-			<pre v-html='recording.interpretation' class='sample-text'></pre>
+			<pre v-html='recording.interpretation'></pre>
 		</td>
 		<td v-html='recording.score'></td>
 	</tr>`,
@@ -45,7 +42,6 @@ Vue.component('recording', {
 				minute: '2-digit'
 			});
 		},
-		showSampleText: function() { return this.recording == this.sampleTextRecording; },
 		playHTML: function() { return this.shouldPlay ? '&#10074;&#10074;' : '&#9658;'; },
 		audio: function() { return this.$refs.audio; }
 	},
@@ -66,9 +62,6 @@ Vue.component('recording', {
 		}
 	},
 	methods: {
-		setSampleTextRecording: function(recording) {
-			this.$emit('set-sample-text-recording', recording);
-		},
 		play: function() {
 			this.audio.play();
 			this.shouldPlay = true;

@@ -15,7 +15,7 @@
 <script src='{% static "SpeechTherapy/js/ProfileUpdater.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/SpeechToText.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/MicrosoftCognitiveServices.js" %}'></script>
-<script src='{% static "SpeechTherapy/js/NewRecordingTranslator.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/NewRecordingInterpreter.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/RecordingUploader.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/NewTextSamplesGetter.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/RecordingsGetter.js" %}'></script>
@@ -101,6 +101,9 @@ new Vue({
 			},
 			onError: (response, status) => {
 				// TODO: Display sign in error
+			},
+			onComplete: () => {
+				this.signingUp = false;
 			}
 		});
 		this.outSigner = new OutSigner(csrfToken, {
@@ -110,6 +113,9 @@ new Vue({
 			},
 			onError: (response, status) => {
 				// TODO: Display sign out error
+			},
+			onComplete: () => {
+				this.signingOut = false;
 			}
 		});
 		this.inSigner = new InSigner(csrfToken, {
@@ -119,6 +125,9 @@ new Vue({
 			},
 			onError: (response, status) => {
 				// TODO: Display sign up error
+			},
+			onComplete: () => {
+				this.signingIn = false;
 			}
 		});
 		this.profileUpdater = new ProfileUpdater(csrfToken, {
@@ -128,10 +137,15 @@ new Vue({
 			},
 			onError: (response, status) => {
 				// TODO: Display update error
+			},
+			onComplete: () => {
+				this.updatingUser = false;
 			}
 		});
-		this.newRecordingTranslator = new NewRecordingTranslator((data) => {
+		this.newRecordingInterpreter = new NewRecordingInterpreter((data) => {
 			this.saveNewRecording(data);
+		}, () => {
+			this.interpretingRecording = false;
 		});
 		this.newRecordingUploader = new RecordingUploader(csrfToken, {
 			url: '{% url "newRecording" %}',
@@ -140,6 +154,9 @@ new Vue({
 			},
 			onError: (response, status) => {
 				// TODO: Display new recording error
+			},
+			onComplete: () => {
+				this.uploadingNewRecording = false;
 			}
 		});
 		this.newTextSamplesGetter = new NewTextSamplesGetter(csrfToken, {
@@ -149,6 +166,9 @@ new Vue({
 			},
 			onError: (response, status) => {
 				// TODO: Display new recording error
+			},
+			onComplete: () => {
+				this.gettingTextSamples = false;
 			}
 		});
 		this.recordingsGetter = new RecordingsGetter(csrfToken, {
@@ -158,6 +178,9 @@ new Vue({
 			},
 			onError: (response, status) => {
 				// TODO: Display get recordings error
+			},
+			onComplete: () => {
+				this.gettingRecordings = false;
 			}
 		});
 		// TODO: Implement textSamplesImporter for admin users
@@ -168,6 +191,9 @@ new Vue({
 			},
 			onError: (response, status) => {
 				// TODO: Display import error
+			},
+			onComplete: () => {
+				this.importTextSamples = false;
 			}
 		});
 	},
@@ -177,7 +203,7 @@ new Vue({
 		showBrowserRecordingSupportError: function() { return !this.browserSupportsRecording && this.activeTab == "newRecording"; },
 		signedIn: function() { return this.user.id; },
 		hasRecordings: function() { return this.recordingCount > 0; },
-		processingNewRecording: function() { return this.savingNewRecording || this.gettingToken || this.interpretingRecording; },
+		processingNewRecording: function() { return this.interpretingRecording || this.uploadingNewRecording; },
 		resultsHistoryClass: function() {
 			let resultsHistoryClass = this.headerClass("resultsHistory");
 			resultsHistoryClass.disabled = !this.hasRecordings;
@@ -230,7 +256,23 @@ new Vue({
 			this.textSamplesImporter.submit(directoryName);
 		},
 		handleNewRecording: function(data) {
-			this.newRecordingTranslator.submit(data);
+			this.newRecordingInterpreter.submit(data);
+			// TODO: Decouple ScriptProcessorNode from Vue app
+			// let audioCtx = new AudioContext();
+			// let request = new XMLHttpRequest();
+
+			// request.open('GET', data.audioSrc, true);
+			// request.responseType = 'arraybuffer';
+			// request.onload = () => {
+			// 	audioCtx.decodeAudioData(request.response, (buffer) => {
+			// 		console.log(audioCtx);
+			// 		data.audio = new Blob(buffer, { type: 'audio/wav; codecs=0' });
+			// 		this.newRecordingInterpreter.submit(data);
+			// 	}, (e) => {
+			// 		console.log('Error with decoding audio data' + e.err);
+			// 	});
+			// };
+			// request.send();
 		},
 		saveNewRecording: function(data) {
 			this.newRecordingUploader.submit(data);

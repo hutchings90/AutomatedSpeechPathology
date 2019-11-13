@@ -18,7 +18,7 @@ Vue.component('new-recording', {
 			</div>
 		</div>
 	</div>`,
-	created: function() {
+	mounted: function() {
 		this.initMediaDevices();
 		this.nextTextSample();
 	},
@@ -27,20 +27,20 @@ Vue.component('new-recording', {
 			audioContext: null,
 			analyserContext: null,
 			analyserNode: null,
-			spacing: 3,
-			barWidth: 1,
+			numBars: 100,
 			freqByteData: null,
-			activeTextSample: null,
+			activeTextSampleIndex: 0,
 			audioVisualizerInterval: null,
 			listening: false,
 			audioSrc: '',
 			timeout: null,
-			maxTime: 30000,
+			maxTime: 14000,
 			mediaRecorder: null,
 			chunks: [],
 			constraints: {
 				audio: true
 			},
+			textSamplesGotten: true
 		};
 	},
 	computed: {
@@ -48,8 +48,24 @@ Vue.component('new-recording', {
 		showAudio: function() { return this.audioSrc && !this.disableTextSampleControls; },
 		disableRecordingControls: function() { return this.gettingTextSamples; },
 		canvas: function() { return this.$refs.analyser; },
-		numBars: function() { return Math.round(this.canvas.width / this.spacing); },
-		multiplier: function() { return this.analyserNode.frequencyBinCount / this.numBars; }
+		spacing: function() { return Math.round(this.canvas.width / this.numBars); },
+		barWidth: function() { return Math.floor(this.spacing / 2); },
+		frequencyBinCount: function() { return Math.min(this.analyserNode.frequencyBinCount, 512); },
+		multiplier: function() { return this.frequencyBinCount / this.numBars; },
+		activeTextSample: function() {
+			if (this.textSamples.length < 1) {
+				let textSample = {
+					id: null,
+					text: 'No text samples were found.'
+				};
+				if (!this.gettingTextSamples && !this.textSamplesGotten) {
+					textSample.text += ' Searching for new text samples...';
+					this.getNewTextSamples();
+				}
+				return textSample;
+			}
+			return this.textSamples[this.activeTextSampleIndex];
+		}
 	},
 	watch: {
 		active: function() {
@@ -58,6 +74,9 @@ Vue.component('new-recording', {
 		},
 		processing: function() {
 			console.log('processing', this.processing);
+		},
+		textSamples: function(newVal, oldVal) {
+			this.textSamplesGotten = true;
 		}
 	},
 	methods: {
@@ -70,28 +89,19 @@ Vue.component('new-recording', {
 			});
 		},
 		nextTextSample: function() {
-			this.setActiveTextSample(this.textSamples.indexOf(this.activeTextSample) + 1);
+			this.setActiveTextSamplePage(this.activeTextSampleIndex + 1);
 		},
 		prevTextSample: function() {
-			this.setActiveTextSample(this.textSamples.indexOf(this.activeTextSample) - 1);
+			this.setActiveTextSamplePage(this.activeTextSampleIndex - 1);
 		},
-		setActiveTextSample: function(i) {
-			if (this.listening) return;
-			if (this.textSamples.length < 1) {
-				this.activeTextSample = {
-					id: null,
-					text: 'No text samples were found. Searching for new text samples...'
-				};
-				this.getNewTextSamples();
-			}
-			else {
-				if (i >= this.textSamples.length) i = 0;
-				else if (i < 0) i = this.textSamples.length - 1;
-				this.activeTextSample = this.textSamples[i];
-			}
+		setActiveTextSamplePage: function(page) {
+			if (page >= this.textSamples.length) page = 0;
+			else if (page < 0) page = this.textSamples.length - 1;
+			this.activeTextSampleIndex = page;
 		},
 		getNewTextSamples: function() {
 			if (this.listening) return;
+			this.textSamplesGotten = false;
 			this.$emit('get-new-text-samples');
 		},
 		endRecording: function() {
@@ -110,8 +120,8 @@ Vue.component('new-recording', {
 			}, this.maxTime);
 		},
 		newRecording: function() {
-			let blob = new Blob(this.chunks, { type: 'audio/ogg; codecs=opus' });
-			blob.name = Math.floor((new Date()).getTime() / 1000);
+			let blob = new Blob(this.chunks, { type: 'audio/wav; codecs=ms_pcm' });
+			blob.name = Math.floor((new Date()).getTime() / 1000) + '.wav';
 
 			this.audioSrc = URL.createObjectURL(blob);
 			this.chunks = [];
@@ -140,7 +150,7 @@ Vue.component('new-recording', {
 			this.analyserNode.fftSize = 2048;
 			this.audioContext.createMediaStreamSource(stream).connect(this.analyserNode);
 			this.analyserContext = this.canvas.getContext('2d');
-			this.freqByteData = new Uint8Array(this.analyserNode.frequencyBinCount);
+			this.freqByteData = new Uint8Array(this.frequencyBinCount);
 
 			if (this.active) this.startAudioVisualizer();
 		},
@@ -165,7 +175,7 @@ Vue.component('new-recording', {
 					this.analyserContext.fillStyle = 'hsl(' + Math.round((i * 360) / this.numBars) + ', 100%, 50%)';
 					this.analyserContext.fillRect(i * this.spacing, this.canvas.height, this.barWidth, -magnitude);
 				}
-			}, );
+			}, 15);
 		},
 		stopAudioVisualizer: function() {
 			clearInterval(this.audioVisualizerInterval);
@@ -176,6 +186,45 @@ Vue.component('new-recording', {
 		deactivate: function() {
 			this.stopAudioVisualizer();
 			if (this.recording) this.mediaRecorder.stop();
+		},
+		exportWav: function() {
+			var buffer = new ArrayBuffer(44 + samples.length * 2);
+			var view = new DataView(buffer);
+			let offset = 44;
+
+			/* RIFF identifier */
+			writeString(view, 0, 'RIFF');
+			/* file length */
+			view.setUint32(4, 32 + samples.length * 2, true);
+			/* RIFF type */
+			writeString(view, 8, 'WAVE');
+			/* format chunk identifier */
+			writeString(view, 12, 'fmt ');
+			/* format chunk length */
+			view.setUint32(16, 16, true);
+			/* sample format (raw) */
+			view.setUint16(20, 1, true);
+			/* channel count */
+			view.setUint16(22, mono?1:2, true);
+			/* sample rate */
+			view.setUint32(24, sampleRate, true);
+			/* byte rate (sample rate * block align) */
+			view.setUint32(28, sampleRate * 4, true);
+			/* block align (channel count * bytes per sample) */
+			view.setUint16(32, 4, true);
+			/* bits per sample */
+			view.setUint16(34, 16, true);
+			/* data chunk identifier */
+			writeString(view, 36, 'data');
+			/* data chunk length */
+			view.setUint32(40, samples.length * 2, true);
+
+			for (var i = 0; i < samples.length; i++, offset+=2){
+				var s = Math.max(-1, Math.min(1, samples[i]));
+				view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+			}
+
+			return view;
 		}
 	}
 });

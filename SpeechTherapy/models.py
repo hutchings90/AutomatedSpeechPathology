@@ -6,7 +6,6 @@ from calendar import month_abbr
 import re
 
 class TextSample(models.Model):
-	expected_time = models.IntegerField(null=False, blank=False)
 	name = models.TextField(null=False, blank=False, unique=True)
 	text = models.TextField(null=False, blank=False, unique=True)
 
@@ -17,7 +16,7 @@ class Recording(models.Model):
 	text_sample = models.ForeignKey(TextSample, on_delete=models.PROTECT)
 	audio = models.FileField(upload_to='audio/%Y/%m/%d/')
 	interpretation = models.TextField()
-	score = models.DecimalField(max_digits=3, decimal_places=2)
+	score = models.IntegerField()
 
 	def data(self):
 		return {
@@ -26,5 +25,11 @@ class Recording(models.Model):
 			'name': self.text_sample.name,
 			'audioSrc': self.audio.url,
 			'interpretation': self.interpretation,
-			'score': float(self.score)
+			'score': self.score
 		}
+
+	def assignScore(self):
+		expectedSet = set(re.sub('[^\w]', ' ', self.text_sample.text).strip().split())
+		actualSet = set(re.sub('[^\w]', ' ', self.interpretation).strip().split())
+		diff = len(list(expectedSet - actualSet))
+		self.score = int((1 - (diff / len(expectedSet))) * 100)
