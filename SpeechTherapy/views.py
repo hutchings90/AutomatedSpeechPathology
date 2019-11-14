@@ -1,11 +1,11 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect, HttpResponseForbidden
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.middleware import csrf
 
 from datetime import datetime
-import json
+import json, zipfile, io
 
 from .models import *
 
@@ -17,7 +17,8 @@ def getUserData(user):
 		'id': user.id,
 		'username': user.username,
 		'password': '',
-		'email': user.email
+		'email': user.email,
+		'is_superuser': user.is_superuser
 	}
 
 def getUsersRecordingsData(user, page=1, recordsPerPage=10):
@@ -120,7 +121,7 @@ def signIn(request):
 def getTextSamples(request):
 	return HttpResponse(json.dumps({
 		'textSamples': getTextSampleData(request.POST.get('id'))
-	}));
+	}))
 
 def signOut(request):
 	logout(request)
@@ -192,8 +193,27 @@ def newRecording(request):
 
 def importTextSamples(request):
 	if not request.user.is_superuser:
-		return HttpResponse()
+		return HttpResponseForbidden()
 
-	post = request.POST
-	directoryName = post.get('directoryName')
-	return HttpResponse(directoryName);
+	startCount = len(TextSample.objects.all())
+	zipFile = zipfile.ZipFile(request.FILES.get('textSamples'), 'r')
+
+	for name in zipFile.namelist():
+		if not zipFile.getinfo(name).is_dir():
+			file = zipFile.open(name, 'r')
+
+			textSample = TextSample()
+			textSample.name = name.rpartition('.')[0]
+			textSample.text = io.TextIOWrapper(file).read()
+			textSample.save()
+
+			file.close()
+
+	zipFile.close()
+
+	endCount = len(TextSample.objects.all())
+	numCreated = endCount - startCount
+
+	return HttpResponse(json.dumps({
+		'numCreated': numCreated
+	}))

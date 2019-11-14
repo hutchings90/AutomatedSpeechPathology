@@ -1,7 +1,7 @@
 class TextSamplesImporter extends SpeechTherapyRequester {
-	submit(directoryName) {
+	submit(file) {
 		let data = new FormData();
-		data.append('directoryName', directoryName);
+		data.append('textSamples', file);
 		super.submit(data);
 	}
 }

@@ -46,8 +46,12 @@
 	text-align: center;
 }
 
-#tab-content > div {
+#tab-content > div:not(.admin-wrapper) {
 	display: inline-block;
+}
+
+#tab-content .admin-wrapper {
+	margin-top: 20px;
 }
 
 .new-recording-prompt {

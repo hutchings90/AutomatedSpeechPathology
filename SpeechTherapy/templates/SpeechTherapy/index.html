@@ -4,6 +4,7 @@
 
 <script src="{% static 'SpeechTherapy/js/vue.js' %}"></script>
 <script src="{% static 'SpeechTherapy/js/profileForm.js' %}"></script>
+<script src="{% static 'SpeechTherapy/js/adminForm.js' %}"></script>
 <script src='{% static "SpeechTherapy/js/newRecording.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/recording.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/recordings.js" %}'></script>
@@ -54,13 +55,18 @@
 				:shown='activeTab == "resultsHistory"'
 				:recorded-since-get-recordings='recordedSinceGetRecordings'></recordings>
 			<profile-form
+				v-show='activeTab == "profile"'
 				@update-attr='updateUser'
 				@right-extra-clicked='signOut'
-				v-show='activeTab == "profile"'
 				:user='user'
 				:processing='signingOut'
-				:method='"POST"'
 				:right-extra='"Sign Out"'></profile-form>
+			<div v-if='user.is_superuser' class='admin-wrapper'>
+				<admin-form
+					v-show='activeTab == "profile"'
+					@import-text-samples='importTextSamples'
+					:importing-text-samples='importingTextSamples'></admin-form>
+			</div>
 		</template>
 		<template v-else>
 			<profile-form
@@ -89,7 +95,7 @@
 </div>
 
 <script>
-new Vue({
+let vue = new Vue({
 	el: '#speech-therapy-app',
 	data: JSON.parse('{{ data | escapejs }}'),
 	created: function() {
@@ -183,7 +189,6 @@ new Vue({
 				this.gettingRecordings = false;
 			}
 		});
-		// TODO: Implement textSamplesImporter for admin users
 		this.textSamplesImporter = new TextSamplesImporter(csrfToken, {
 			url: '{% url "importTextSamples" %}',
 			onSuccess: (response) => {
@@ -193,7 +198,7 @@ new Vue({
 				// TODO: Display import error
 			},
 			onComplete: () => {
-				this.importTextSamples = false;
+				this.importingTextSamples = false;
 			}
 		});
 	},
@@ -252,8 +257,8 @@ new Vue({
 		updateUser: function(attr) {
 			this.profileUpdater.submit(attr, this.user[attr]);
 		},
-		importTextSamples: function(directoryName) {
-			this.textSamplesImporter.submit(directoryName);
+		importTextSamples: function(file) {
+			this.textSamplesImporter.submit(file);
 		},
 		handleNewRecording: function(data) {
 			this.newRecordingInterpreter.submit(data);
@@ -285,6 +290,7 @@ new Vue({
 			this.newRecordingUploader.updateCSRFToken(csrfToken);
 			this.newTextSamplesGetter.updateCSRFToken(csrfToken);
 			this.recordingsGetter.updateCSRFToken(csrfToken);
+			this.textSamplesImporter.updateCSRFToken(csrfToken);
 		},
 		onSignUpSuccess: function(response) {
 			this.user = response.user;
