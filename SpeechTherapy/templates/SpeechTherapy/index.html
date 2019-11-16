@@ -35,17 +35,14 @@
 	</div>
 	<div id='tab-content'>
 		<template v-if='signedIn'>
-			<div v-show='showBrowserRecordingSupportError'>This browser does not support audio recording.</div>
 			<new-recording
-				v-if='browserSupportsRecording'
 				v-show='activeTab == "newRecording"'
 				@get-new-text-samples='getNewTextSamples'
 				@new-recording='handleNewRecording'
 				:active='activeTab == "newRecording"'
 				:getting-text-samples='gettingTextSamples'
 				:processing='processingNewRecording'
-				:text-samples='textSamples'
-				:media-devices='mediaDevices'></new-recording>
+				:text-samples='textSamples'></new-recording>
 			<recordings
 				v-show='activeTab == "resultsHistory"'
 				@get-recordings='getRecordings'
@@ -150,7 +147,10 @@ let vue = new Vue({
 		});
 		this.newRecordingInterpreter = new NewRecordingInterpreter((data) => {
 			this.saveNewRecording(data);
-		}, () => {
+		}, (response, status) => {
+			// TODO: Display get token error.
+			console.log(status, response);
+		}, (response) => {
 			this.interpretingRecording = false;
 		});
 		this.newRecordingUploader = new RecordingUploader(csrfToken, {
@@ -202,11 +202,7 @@ let vue = new Vue({
 			}
 		});
 	},
-	computed: {
-		mediaDevices: function() { return navigator.mediaDevices; },
-		browserSupportsRecording: function() { return this.mediaDevices; },
-		showBrowserRecordingSupportError: function() { return !this.browserSupportsRecording && this.activeTab == "newRecording"; },
-		signedIn: function() { return this.user.id; },
+	computed: {signedIn: function() { return this.user.id; },
 		hasRecordings: function() { return this.recordingCount > 0; },
 		processingNewRecording: function() { return this.interpretingRecording || this.uploadingNewRecording; },
 		resultsHistoryClass: function() {
@@ -237,30 +233,38 @@ let vue = new Vue({
 			this.activateTab("resultsHistory");
 		},
 		signUp: function() {
+			this.signingUp = true;
 			this.upSigner.submit(this.user);
 		},
 		signIn: function() {
+			this.signingIn = true;
 			this.inSigner.submit(this.user.username, this.user.password);
 		},
 		forgotPassword: function() {
 			// TODO: Implement forgot password
 		},
 		signOut: function() {
+			this.signingOut = true;
 			this.outSigner.submit();
 		},
 		getNewTextSamples: function() {
+			this.gettingTextSamples = true;
 			this.newTextSamplesGetter.submit(this.maxTextSampleId);
 		},
 		getRecordings: function(data) {
+			this.gettingRecordings = true;
 			this.recordingsGetter.submit(data.page, data.recordsPerPage);
 		},
 		updateUser: function(attr) {
+			this.updatingUser = true;
 			this.profileUpdater.submit(attr, this.user[attr]);
 		},
 		importTextSamples: function(file) {
+			this.importingTextSamples = true;
 			this.textSamplesImporter.submit(file);
 		},
 		handleNewRecording: function(data) {
+			this.interpretingRecording = true;
 			this.newRecordingInterpreter.submit(data);
 			// TODO: Decouple ScriptProcessorNode from Vue app
 			// let audioCtx = new AudioContext();
@@ -280,6 +284,7 @@ let vue = new Vue({
 			// request.send();
 		},
 		saveNewRecording: function(data) {
+			this.uploadingNewRecording = true;
 			this.newRecordingUploader.submit(data);
 		},
 		updateCSRFToken: function(csrfToken) {

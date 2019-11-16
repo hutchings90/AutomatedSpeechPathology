@@ -1,20 +1,26 @@
+/**
+ * Recording and WAV encoding based on Matt Diamond's work at https://github.com/mattdiamond/Recorderjs.
+ */
 Vue.component('new-recording', {
-	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples', 'mediaDevices' ],
+	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples' ],
 	template: `<div>
-		<div class='viz'>
-			<canvas ref='analyser' width='1024' height='500'></canvas>
-		</div>
-		<div class='new-recording-prompt'>
-			<div>
-				<button @click='prevTextSample' :disabled='disableTextSampleControls'><</button>
-				<button @click='getNewTextSamples' :disabled='disableTextSampleControls'>New Phrases</button>
-				<button @click='nextTextSample' :disabled='disableTextSampleControls'>></button>
-				<pre v-html='activeTextSample.text' class='sample-text''></pre>
+		<div v-if='showBrowserRecordingSupportError'>Failed to access audio.</div>
+		<div v-else>
+			<div class='viz'>
+				<canvas ref='analyser' width='1024' height='500'></canvas>
 			</div>
-			<button @click='beginRecording' v-show='!listening' :disabled='disableRecordingControls'>Record</button>
-			<button @click='endRecording' v-show='listening' :disabled='disableRecordingControls'>Stop</button>
-			<div v-show='showAudio'>
-				<audio ref='newRecording' :src='audioSrc' controls></audio>
+			<div class='new-recording-prompt'>
+				<div>
+					<button @click='prevTextSample' :disabled='disableTextSampleControls'><</button>
+					<button @click='getNewTextSamples' :disabled='disableTextSampleControls'>New Phrases</button>
+					<button @click='nextTextSample' :disabled='disableTextSampleControls'>></button>
+					<pre v-html='activeTextSample.text' class='sample-text''></pre>
+				</div>
+				<button @click='beginRecording' v-show='!listening' :disabled='disableRecordingControls'>Record</button>
+				<button @click='endRecording' v-show='listening' :disabled='disableRecordingControls'>Stop</button>
+				<div v-show='showAudio'>
+					<audio ref='newRecording' :src='audioSrc' controls></audio>
+				</div>
 			</div>
 		</div>
 	</div>`,
@@ -35,18 +41,23 @@ Vue.component('new-recording', {
 			audioSrc: '',
 			timeout: null,
 			maxTime: 14000,
-			mediaRecorder: null,
-			chunks: [],
+			node: null,
+			numChannels: 2,
+			recBuffers: [[], []],
+			recLength: 0,
 			constraints: {
 				audio: true
 			},
-			textSamplesGotten: true
+			textSamplesGotten: true,
+			failedToGetUserMedia: false
 		};
 	},
 	computed: {
-		disableTextSampleControls: function() { return this.listening || this.processing || this.gettingTextSamples; },
-		showAudio: function() { return this.audioSrc && !this.disableTextSampleControls; },
-		disableRecordingControls: function() { return this.gettingTextSamples; },
+		browserSupportsRecording: function() { return navigator.mediaDevices || this.failedToGetUserMedia; },
+		showBrowserRecordingSupportError: function() { return !this.browserSupportsRecording; },
+		disableRecordingControls: function() { return this.processing || this.gettingTextSamples; },
+		disableTextSampleControls: function() { return this.listening || this.disableRecordingControls; },
+		showAudio: function() { return this.audioSrc && !this.listening; },
 		canvas: function() { return this.$refs.analyser; },
 		spacing: function() { return Math.round(this.canvas.width / this.numBars); },
 		barWidth: function() { return Math.floor(this.spacing / 2); },
@@ -72,21 +83,31 @@ Vue.component('new-recording', {
 			if (this.active) this.activate();
 			else this.deactivate();
 		},
-		processing: function() {
-			console.log('processing', this.processing);
-		},
 		textSamples: function(newVal, oldVal) {
 			this.textSamplesGotten = true;
 		}
 	},
 	methods: {
 		initMediaDevices: function() {
-			this.mediaDevices.getUserMedia(this.constraints).then((stream) => {
-				this.gotStream(stream);
-			}).catch((err) => {
-				alert('Unable to access audio.\n\n' + err);
-				console.log('The following error occurred: ' + err);
-			});
+			if (navigator.getUserMedia) {
+				navigator.getUserMedia(this.constraints, (stream) => {
+					this.gotStream(stream);
+				}, (err) => {
+					alert('Unable to access audio.\n\n' + err);
+					console.log('The following error occurred: ' + err);
+					this.failedToGetUserMedia = true;
+				});
+			}
+			else if (navigator.mediaDevices.getUserMedia) {
+				navigator.mediaDevices.getUserMedia(this.constraints).then((stream) => {
+					this.gotStream(stream);
+				}).catch((err) => {
+					alert('Unable to access audio.\n\n' + err);
+					console.log('The following error occurred: ' + err);
+					this.failedToGetUserMedia = true;
+				});
+			}
+			else this.failedToGetUserMedia = true;
 		},
 		nextTextSample: function() {
 			this.setActiveTextSamplePage(this.activeTextSampleIndex + 1);
@@ -107,55 +128,66 @@ Vue.component('new-recording', {
 		endRecording: function() {
 			clearTimeout(this.timeout);
 			this.timeout = null;
-			this.mediaRecorder.stop();
+			this.newRecording();
 		},
 		beginRecording: function() {
 			if (this.timeout) return;
 			this.audioSrc = '';
-			this.chunks = [];
-			this.mediaRecorder.start();
+			this.recBuffers = [[], []];
+			this.recLength = 0;
 			this.listening = true;
 			this.timeout = setTimeout(() => {
 				this.endRecording();
 			}, this.maxTime);
 		},
 		newRecording: function() {
-			let blob = new Blob(this.chunks, { type: 'audio/wav; codecs=ms_pcm' });
+			let buffers = [];
+			for (var i = 0; i < this.numChannels; i++) {
+				buffers.push(this.mergeBuffers(this.recBuffers[i], this.recLength));
+			}
+
+			let interleaved = this.numChannels == 2 ? this.interleave(buffers[0], buffers[1]) : buffers[0];
+			let dataView = this.encodeWAV(interleaved);
+			let blob = new Blob([ dataView ], { type: 'audio/wav' });
 			blob.name = Math.floor((new Date()).getTime() / 1000) + '.wav';
 
 			this.audioSrc = URL.createObjectURL(blob);
-			this.chunks = [];
 			this.listening = false;
-					
+
 			this.$emit('new-recording', {
 				blob: blob,
 				text_sample_id: this.activeTextSample.id
 			});
 		},
 		gotStream: function (stream) {
-			let mediaRecorder = new MediaRecorder(stream);
-
-			mediaRecorder.onstop = (e) => {
-				this.newRecording();
-			};
-
-			mediaRecorder.ondataavailable = (e) => {
-				this.chunks.push(e.data);
-			};
-
-			this.mediaRecorder = mediaRecorder;
-
 			this.audioContext = new AudioContext();
 			this.analyserNode = this.audioContext.createAnalyser();
 			this.analyserNode.fftSize = 2048;
 			this.audioContext.createMediaStreamSource(stream).connect(this.analyserNode);
 			this.analyserContext = this.canvas.getContext('2d');
 			this.freqByteData = new Uint8Array(this.frequencyBinCount);
-
 			if (this.active) this.startAudioVisualizer();
+
+			this.source = this.audioContext.createMediaStreamSource(stream);
+			this.context = this.source.context;
+			this.node = (this.context.createScriptProcessor || this.context.createJavaScriptNode).call(this.context, 4096, this.numChannels, this.numChannels);
+			this.buffers = [[], []];
+			this.node.onaudioprocess = (e) => {
+				if (!this.listening) return;
+
+				for (var i = 0; i < this.numChannels; i++) {
+					this.recBuffers[i].push(e.inputBuffer.getChannelData(i));
+				}
+
+				this.recLength += this.recBuffers[0][0].length;
+			}
+			this.source.connect(this.node);
+			this.node.connect(this.context.destination);
 		},
-		startAudioVisualizer: function(time) {
-			// Visualizer based on https://webaudiodemos.appspot.com/AudioRecorder/index.html. Retrieved Oct-Nov, 2019.
+		/**
+		 * Visualizer based on https://webaudiodemos.appspot.com/AudioRecorder/index.html. Retrieved Oct-Nov, 2019.
+		 */
+		startAudioVisualizer: function() {
 			this.audioVisualizerInterval = setInterval(() => {
 				this.analyserNode.getByteFrequencyData(this.freqByteData);
 
@@ -185,44 +217,75 @@ Vue.component('new-recording', {
 		},
 		deactivate: function() {
 			this.stopAudioVisualizer();
-			if (this.recording) this.mediaRecorder.stop();
+			if (this.listening) this.endRecording();
 		},
-		exportWav: function() {
+		mergeBuffers: function(buffers, len) {
+			let result = new Float32Array(len);
+			let offset = 0;
+			for (var i = 0; i < buffers.length; i++) {
+				result.set(buffers[i], offset);
+				offset += buffers[i].length;
+			}
+			return result;
+		},
+		interleave: function(inputL, inputR) {
+			let len = inputL.length + inputR.length;
+			let result = new Float32Array(len);
+
+			let index = 0;
+			let inputIndex = 0;
+
+			while (index < len) {
+				result[index++] = inputL[inputIndex];
+				result[index++] = inputR[inputIndex];
+				inputIndex++;
+			}
+
+			return result;
+		},
+		floatTo16BitPCM: function(output, offset, input){
+			for (var i = 0; i < input.length; i++, offset+=2){
+				var s = Math.max(-1, Math.min(1, input[i]));
+				output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+			}
+		},
+		writeString: function(view, offset, string){
+			for (var i = 0; i < string.length; i++) {
+				view.setUint8(offset + i, string.charCodeAt(i));
+			}
+		},
+		encodeWAV: function(samples){
 			var buffer = new ArrayBuffer(44 + samples.length * 2);
 			var view = new DataView(buffer);
-			let offset = 44;
 
 			/* RIFF identifier */
-			writeString(view, 0, 'RIFF');
+			this.writeString(view, 0, 'RIFF');
 			/* file length */
-			view.setUint32(4, 32 + samples.length * 2, true);
+			view.setUint32(4, 36 + samples.length * 2, true);
 			/* RIFF type */
-			writeString(view, 8, 'WAVE');
+			this.writeString(view, 8, 'WAVE');
 			/* format chunk identifier */
-			writeString(view, 12, 'fmt ');
+			this.writeString(view, 12, 'fmt ');
 			/* format chunk length */
 			view.setUint32(16, 16, true);
 			/* sample format (raw) */
 			view.setUint16(20, 1, true);
 			/* channel count */
-			view.setUint16(22, mono?1:2, true);
+			view.setUint16(22, this.numChannels, true);
 			/* sample rate */
-			view.setUint32(24, sampleRate, true);
+			view.setUint32(24, this.context.sampleRate, true);
 			/* byte rate (sample rate * block align) */
-			view.setUint32(28, sampleRate * 4, true);
+			view.setUint32(28, this.context.sampleRate * 4, true);
 			/* block align (channel count * bytes per sample) */
-			view.setUint16(32, 4, true);
+			view.setUint16(32, this.numChannels * 2, true);
 			/* bits per sample */
 			view.setUint16(34, 16, true);
 			/* data chunk identifier */
-			writeString(view, 36, 'data');
+			this.writeString(view, 36, 'data');
 			/* data chunk length */
 			view.setUint32(40, samples.length * 2, true);
 
-			for (var i = 0; i < samples.length; i++, offset+=2){
-				var s = Math.max(-1, Math.min(1, samples[i]));
-				view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-			}
+			this.floatTo16BitPCM(view, 44, samples);
 
 			return view;
 		}

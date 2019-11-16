@@ -1,11 +1,21 @@
 class SpeechToText {
-	constructor(onSaveNewRecording) {
-		this.onSaveNewRecording = onSaveNewRecording;
+	constructor(onSuccess, onError, onComplete) {
+		this.onSuccess = onSuccess;
+		this.onError = onError;
+		this.onComplete = onComplete;
 		this.data = null;
 	}
 
-	saveNewRecording(displayText) {
+	_onSuccess(displayText) {
 		this.data.interpretation = displayText;
-		this.onSaveNewRecording(this.data);
+		this.onSuccess(this.data);
+	}
+
+	_onError(response, status) {
+		this.onError(response, status);
+	}
+
+	_onComplete(response) {
+		this.onComplete(response);
 	}
 }

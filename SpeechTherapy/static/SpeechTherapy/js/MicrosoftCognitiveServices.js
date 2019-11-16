@@ -1,6 +1,6 @@
 class MicrosoftCognitiveServices extends SpeechToText {
-	constructor(subscriptionKey, tokenUrl, speechToTextUrl, onSaveNewRecording, onComplete) {
-		super(onSaveNewRecording);
+	constructor(subscriptionKey, tokenUrl, speechToTextUrl, onSuccess, onError, onComplete) {
+		super(onSuccess, onError, onComplete);
 		this.issueTokenXHR = new XHR({
 			url: tokenUrl,
 			headers: {
@@ -10,26 +10,25 @@ class MicrosoftCognitiveServices extends SpeechToText {
 				this.getTextFromRecording(response);
 			},
 			onError: (response, status) => {
+				this._onError(response, status);
 				// Call onComplete since it won't get called by speechToTextXHR's onComplete
-				this.onComplete(response);
-				// TODO: Display get token error.
+				this._onComplete(response);
 			}
 			// Don't set onComplete since it isn't complete until the speechToTextXHR's onComplete
 		});
 		this.speechToTextXHR = new XHR({
 			url: speechToTextUrl,
 			onSuccess: (response) => {
-				if (response.RecognitionStatus != 'Success') {
-					// TODO: Display speech to text processing error.
-					return;
-				}
-				this.saveNewRecording(response.DisplayText);
+				// TODO: Display speech to text processing error for any RecognitionStatus other than 'Success'.
+				if (response.RecognitionStatus == 'Success') this._onSuccess(response.DisplayText);
+				else this._onError(response.RecognitionStatus, 200);
 			},
 			onError: (response, status) => {
 				// TODO: Display speech-to-text error.
+				this._onError(response, status);
 			},
 			onComplete: (response) => {
-				this.onComplete(response);
+				this._onComplete(response);
 			}
 		});
 	}
