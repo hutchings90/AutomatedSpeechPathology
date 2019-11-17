@@ -1,4 +1,5 @@
 /**
+ * Visualizer based on https://webaudiodemos.appspot.com/AudioRecorder/index.html. Retrieved Oct-Nov, 2019.
  * Recording and WAV encoding based on Matt Diamond's work at https://github.com/mattdiamond/Recorderjs.
  */
 Vue.component('new-recording', {
@@ -128,7 +129,7 @@ Vue.component('new-recording', {
 		endRecording: function() {
 			clearTimeout(this.timeout);
 			this.timeout = null;
-			this.newRecording();
+			this.exportWAV();
 		},
 		beginRecording: function() {
 			if (this.timeout) return;
@@ -140,9 +141,9 @@ Vue.component('new-recording', {
 				this.endRecording();
 			}, this.maxTime);
 		},
-		newRecording: function() {
+		exportWAV: function() {
 			let buffers = [];
-			for (var i = 0; i < this.numChannels; i++) {
+			for (let i = 0; i < this.numChannels; i++) {
 				buffers.push(this.mergeBuffers(this.recBuffers[i], this.recLength));
 			}
 
@@ -171,12 +172,11 @@ Vue.component('new-recording', {
 			this.source = this.audioContext.createMediaStreamSource(stream);
 			this.context = this.source.context;
 			this.node = (this.context.createScriptProcessor || this.context.createJavaScriptNode).call(this.context, 4096, this.numChannels, this.numChannels);
-			this.buffers = [[], []];
 			this.node.onaudioprocess = (e) => {
 				if (!this.listening) return;
 
-				for (var i = 0; i < this.numChannels; i++) {
-					this.recBuffers[i].push(e.inputBuffer.getChannelData(i));
+				for (let i = 0; i < this.numChannels; i++) {
+					this.recBuffers[i].push([...e.inputBuffer.getChannelData(i)]);
 				}
 
 				this.recLength += this.recBuffers[0][0].length;
@@ -184,9 +184,6 @@ Vue.component('new-recording', {
 			this.source.connect(this.node);
 			this.node.connect(this.context.destination);
 		},
-		/**
-		 * Visualizer based on https://webaudiodemos.appspot.com/AudioRecorder/index.html. Retrieved Oct-Nov, 2019.
-		 */
 		startAudioVisualizer: function() {
 			this.audioVisualizerInterval = setInterval(() => {
 				this.analyserNode.getByteFrequencyData(this.freqByteData);
@@ -222,7 +219,7 @@ Vue.component('new-recording', {
 		mergeBuffers: function(buffers, len) {
 			let result = new Float32Array(len);
 			let offset = 0;
-			for (var i = 0; i < buffers.length; i++) {
+			for (let i = 0; i < buffers.length; i++) {
 				result.set(buffers[i], offset);
 				offset += buffers[i].length;
 			}
@@ -244,19 +241,19 @@ Vue.component('new-recording', {
 			return result;
 		},
 		floatTo16BitPCM: function(output, offset, input){
-			for (var i = 0; i < input.length; i++, offset+=2){
-				var s = Math.max(-1, Math.min(1, input[i]));
+			for (let i = 0; i < input.length; i++, offset+=2){
+				let s = Math.max(-1, Math.min(1, input[i]));
 				output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
 			}
 		},
 		writeString: function(view, offset, string){
-			for (var i = 0; i < string.length; i++) {
+			for (let i = 0; i < string.length; i++) {
 				view.setUint8(offset + i, string.charCodeAt(i));
 			}
 		},
 		encodeWAV: function(samples){
-			var buffer = new ArrayBuffer(44 + samples.length * 2);
-			var view = new DataView(buffer);
+			let buffer = new ArrayBuffer(44 + samples.length * 2);
+			let view = new DataView(buffer);
 
 			/* RIFF identifier */
 			this.writeString(view, 0, 'RIFF');

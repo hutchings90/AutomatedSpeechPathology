@@ -9,7 +9,7 @@ class NewRecordingInterpreter {
 	}
 
 	submit(data) {
-		for (var i = this.speechAnalyzers.length - 1; i >= 0; i--) {
+		for (let i = this.speechAnalyzers.length - 1; i >= 0; i--) {
 			this.speechAnalyzers[i].submit(data);
 		}
 	}
