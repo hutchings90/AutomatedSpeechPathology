@@ -73,6 +73,8 @@ def index(request):
 			'recordedSinceGetRecordings': False,
 			'recording': None,
 			'importingTextSamples': False,
+			'interpretation': '',
+			'score': -1,
 		}),
 		'csrfToken': csrf.get_token(request)
 	})

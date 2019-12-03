@@ -3,11 +3,11 @@
  * Recording and WAV encoding based on Matt Diamond's work at https://github.com/mattdiamond/Recorderjs.
  */
 Vue.component('new-recording', {
-	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples' ],
+	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples', 'interpretation', 'score' ],
 	template: `<div>
 		<div v-if='showBrowserRecordingSupportError'>Failed to access audio.</div>
 		<div v-else>
-			<div class='viz'>
+			<div>
 				<canvas ref='analyser' width='1024' height='500'></canvas>
 			</div>
 			<div class='new-recording-prompt'>
@@ -15,12 +15,14 @@ Vue.component('new-recording', {
 					<button @click='prevTextSample' :disabled='disableTextSampleControls'><</button>
 					<button @click='getNewTextSamples' :disabled='disableTextSampleControls'>New Phrases</button>
 					<button @click='nextTextSample' :disabled='disableTextSampleControls'>></button>
-					<pre v-html='activeTextSample.text' class='sample-text''></pre>
+					<p v-html='activeTextSample.text'></p>
 				</div>
 				<button @click='beginRecording' v-show='!listening' :disabled='disableRecordingControls'>Record</button>
 				<button @click='endRecording' v-show='listening' :disabled='disableRecordingControls'>Stop</button>
-				<div v-show='showAudio'>
+				<div v-show='showNewRecordingData' class='new-recording-data'>
 					<audio ref='newRecording' :src='audioSrc' controls></audio>
+					<p v-show='interpretation'>Interpretation: <span v-html='interpretation'></span></p>
+					<p v-show='score >= 0'>Score: <span v-html='score'></span>%</p>
 				</div>
 			</div>
 		</div>
@@ -58,7 +60,7 @@ Vue.component('new-recording', {
 		showBrowserRecordingSupportError: function() { return !this.browserSupportsRecording; },
 		disableRecordingControls: function() { return this.processing || this.gettingTextSamples; },
 		disableTextSampleControls: function() { return this.listening || this.disableRecordingControls; },
-		showAudio: function() { return this.audioSrc && !this.listening; },
+		showNewRecordingData: function() { return this.audioSrc && !this.listening; },
 		canvas: function() { return this.$refs.analyser; },
 		spacing: function() { return Math.round(this.canvas.width / this.numBars); },
 		barWidth: function() { return Math.floor(this.spacing / 2); },

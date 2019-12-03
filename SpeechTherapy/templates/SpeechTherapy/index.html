@@ -42,7 +42,9 @@
 				:active='activeTab == "newRecording"'
 				:getting-text-samples='gettingTextSamples'
 				:processing='processingNewRecording'
-				:text-samples='textSamples'></new-recording>
+				:text-samples='textSamples'
+				:interpretation='interpretation'
+				:score='score'></new-recording>
 			<recordings
 				v-show='activeTab == "resultsHistory"'
 				@get-recordings='getRecordings'
@@ -146,7 +148,7 @@ let vue = new Vue({
 			}
 		});
 		this.newRecordingInterpreter = new NewRecordingInterpreter((data) => {
-			this.saveNewRecording(data);
+			this.handleRecordingInterpretation(data);
 		}, (response, status) => {
 			// TODO: Display get token error.
 			console.log(status, response);
@@ -265,7 +267,13 @@ let vue = new Vue({
 		},
 		handleNewRecording: function(data) {
 			this.interpretingRecording = true;
+			this.interpretation = '';
+			this.score = -1;
 			this.newRecordingInterpreter.submit(data);
+		},
+		handleRecordingInterpretation: function(data) {
+			this.interpretation = data.interpretation;
+			this.saveNewRecording(data);
 		},
 		saveNewRecording: function(data) {
 			this.uploadingNewRecording = true;
@@ -310,6 +318,7 @@ let vue = new Vue({
 		},
 		onNewRecordingSuccess: function(response) {
 			this.recordedSinceGetRecordings = true;
+			this.score = response.recording.score;
 			this.recording = response.recording;
 			this.recordingCount = response.recordingCount;
 			this.recordings = [];

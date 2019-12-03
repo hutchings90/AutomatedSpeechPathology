@@ -58,6 +58,10 @@
 	display: inline-block;
 }
 
+.new-recording-data {
+	margin-top: 10px;
+}
+
 .extra-links > a {
 	cursor: pointer;
 	font-size: 14px;

@@ -20,7 +20,7 @@ Vue.component('recording', {
 		<td>
 			<pre v-html='recording.interpretation'></pre>
 		</td>
-		<td v-html='recording.score'></td>
+		<td v-html='recording.score + "%"'></td>
 	</tr>`,
 	data: function() {
 		return {
