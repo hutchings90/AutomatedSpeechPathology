@@ -19,12 +19,10 @@ class MicrosoftCognitiveServices extends SpeechToText {
 		this.speechToTextXHR = new XHR({
 			url: speechToTextUrl,
 			onSuccess: (response) => {
-				// TODO: Display speech to text processing error for any RecognitionStatus other than 'Success'.
 				if (response.RecognitionStatus == 'Success') this._onSuccess(response.DisplayText);
 				else this._onError(response.RecognitionStatus, 200);
 			},
 			onError: (response, status) => {
-				// TODO: Display speech-to-text error.
 				this._onError(response, status);
 			},
 			onComplete: (response) => {
@@ -34,7 +32,7 @@ class MicrosoftCognitiveServices extends SpeechToText {
 	}
 
 	submit(data) {
-		this.data = data;
+		super.submit(data);
 		this.issueTokenXHR.submit();
 	}
 

@@ -18,4 +18,11 @@ class SpeechToText {
 	_onComplete(response) {
 		this.onComplete(response);
 	}
+
+	/**
+	 * All classes that inherit from this class should call super.submit in order to set this.data properly.
+	 */
+	submit(data) {
+		this.data = data;
+	}
 }

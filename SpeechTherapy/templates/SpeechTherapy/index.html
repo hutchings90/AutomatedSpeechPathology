@@ -266,22 +266,6 @@ let vue = new Vue({
 		handleNewRecording: function(data) {
 			this.interpretingRecording = true;
 			this.newRecordingInterpreter.submit(data);
-			// TODO: Decouple ScriptProcessorNode from Vue app
-			// let audioCtx = new AudioContext();
-			// let request = new XMLHttpRequest();
-
-			// request.open('GET', data.audioSrc, true);
-			// request.responseType = 'arraybuffer';
-			// request.onload = () => {
-			// 	audioCtx.decodeAudioData(request.response, (buffer) => {
-			// 		console.log(audioCtx);
-			// 		data.audio = new Blob(buffer, { type: 'audio/wav; codecs=0' });
-			// 		this.newRecordingInterpreter.submit(data);
-			// 	}, (e) => {
-			// 		console.log('Error with decoding audio data' + e.err);
-			// 	});
-			// };
-			// request.send();
 		},
 		saveNewRecording: function(data) {
 			this.uploadingNewRecording = true;

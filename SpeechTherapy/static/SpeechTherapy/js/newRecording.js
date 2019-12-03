@@ -129,7 +129,15 @@ Vue.component('new-recording', {
 		endRecording: function() {
 			clearTimeout(this.timeout);
 			this.timeout = null;
-			this.exportWAV();
+			this.listening = false;
+
+			let blob = this.exportWAV();
+			this.audioSrc = URL.createObjectURL(blob);
+
+			this.$emit('new-recording', {
+				blob: blob,
+				text_sample_id: this.activeTextSample.id
+			});
 		},
 		beginRecording: function() {
 			if (this.timeout) return;
@@ -152,13 +160,7 @@ Vue.component('new-recording', {
 			let blob = new Blob([ dataView ], { type: 'audio/wav' });
 			blob.name = Math.floor((new Date()).getTime() / 1000) + '.wav';
 
-			this.audioSrc = URL.createObjectURL(blob);
-			this.listening = false;
-
-			this.$emit('new-recording', {
-				blob: blob,
-				text_sample_id: this.activeTextSample.id
-			});
+			return blob;
 		},
 		gotStream: function (stream) {
 			this.audioContext = new AudioContext();
@@ -171,7 +173,7 @@ Vue.component('new-recording', {
 
 			this.source = this.audioContext.createMediaStreamSource(stream);
 			this.context = this.source.context;
-			this.node = (this.context.createScriptProcessor || this.context.createJavaScriptNode).call(this.context, 4096, this.numChannels, this.numChannels);
+			this.node = (this.context.createScriptProcessor || this.context.createJavaScriptNode).call(this.context, 16384, this.numChannels, this.numChannels);
 			this.node.onaudioprocess = (e) => {
 				if (!this.listening) return;
 
