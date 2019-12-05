@@ -3,6 +3,8 @@
 <link rel="stylesheet" type="text/css" href="{% static 'SpeechTherapy/style.css' %}"/>
 
 <script src="{% static 'SpeechTherapy/js/vue.js' %}"></script>
+<script src="{% static 'SpeechTherapy/js/report.js' %}"></script>
+<script src="{% static 'SpeechTherapy/js/reports.js' %}"></script>
 <script src="{% static 'SpeechTherapy/js/profileForm.js' %}"></script>
 <script src="{% static 'SpeechTherapy/js/adminForm.js' %}"></script>
 <script src='{% static "SpeechTherapy/js/newRecording.js" %}'></script>
@@ -25,6 +27,8 @@
 <title>Automated Speech Therapy</title>
 
 <div id='speech-therapy-app'>
+	<reports :reports='reports'></reports>
+
 	<div id='banner'>
 		<strong>Automated Speech Therapy</strong>
 		<ul v-if='signedIn' id='tab-headers'>
@@ -33,6 +37,7 @@
 			<li @click='activateTab("profile")' :class='headerClass("profile")'>Profile</li>
 		</ul>
 	</div>
+
 	<div id='tab-content'>
 		<template v-if='signedIn'>
 			<new-recording
@@ -101,110 +106,60 @@ let vue = new Vue({
 		let csrfToken = '{{ csrfToken }}';
 		this.upSigner = new UpSigner(csrfToken, {
 			url: '{% url "signUp" %}',
-			onSuccess: (response) => {
-				this.onSignUpSuccess(response);
-			},
-			onError: (response, status) => {
-				// TODO: Display sign in error
-			},
-			onComplete: () => {
-				this.signingUp = false;
-			}
+			onSuccess: (response) => this.onSignUpSuccess(response),
+			onError: (response, status) => this.addError(response),
+			onComplete: () => this.signingUp = false
 		});
 		this.outSigner = new OutSigner(csrfToken, {
 			url: '{% url "signOut" %}',
-			onSuccess: (response) => {
-				this.onSignOutSuccess(response);
-			},
-			onError: (response, status) => {
-				// TODO: Display sign out error
-			},
-			onComplete: () => {
-				this.signingOut = false;
-			}
+			onSuccess: (response) => this.onSignOutSuccess(response),
+			onError: (response, status) => this.addError(response),
+			onComplete: () => this.signingOut = false
 		});
 		this.inSigner = new InSigner(csrfToken, {
 			url: '{% url "signIn" %}',
-			onSuccess: (response) => {
-				this.onSignInSuccess(response);
-			},
-			onError: (response, status) => {
-				// TODO: Display sign up error
-			},
-			onComplete: () => {
-				this.signingIn = false;
-			}
+			onSuccess: (response) => this.onSignInSuccess(response),
+			onError: (response, status) => this.addError(response),
+			onComplete: () => this.signingIn = false
 		});
 		this.profileUpdater = new ProfileUpdater(csrfToken, {
 			url: '{% url "updateUser" %}',
-			onSuccess: (response) => {
-				this.onUpdateUserSuccess(response);
-			},
-			onError: (response, status) => {
-				// TODO: Display update error
-			},
-			onComplete: () => {
-				this.updatingUser = false;
-			}
+			onSuccess: (response) => this.onUpdateUserSuccess(response),
+			onError: (response, status) => this.addError(response),
+			onComplete: () => this.updatingUser = false
 		});
-		this.newRecordingInterpreter = new NewRecordingInterpreter((data) => {
-			this.handleRecordingInterpretation(data);
-		}, (response, status) => {
-			// TODO: Display get token error.
-			console.log(status, response);
-		}, (response) => {
-			this.interpretingRecording = false;
+		this.newRecordingInterpreter = new NewRecordingInterpreter({
+			onSuccess: (data) => this.handleRecordingInterpretation(data),
+			onError: (response, status) => this.addError(response),
+			onComplete: (response) => this.interpretingRecording = false
 		});
 		this.newRecordingUploader = new RecordingUploader(csrfToken, {
 			url: '{% url "newRecording" %}',
-			onSuccess: (response) => {
-				this.onNewRecordingSuccess(response);
-			},
-			onError: (response, status) => {
-				// TODO: Display new recording error
-			},
-			onComplete: () => {
-				this.uploadingNewRecording = false;
-			}
+			onSuccess: (response) => this.onNewRecordingSuccess(response),
+			onError: (response, status) => this.addError(response),
+			onComplete: () => this.uploadingNewRecording = false
 		});
 		this.newTextSamplesGetter = new NewTextSamplesGetter(csrfToken, {
 			url: '{% url "getTextSamples" %}',
-			onSuccess: (response) => {
-				this.onGetNewTextSampleSuccess(response);
-			},
-			onError: (response, status) => {
-				// TODO: Display new recording error
-			},
-			onComplete: () => {
-				this.gettingTextSamples = false;
-			}
+			onSuccess: (response) => this.onGetNewTextSampleSuccess(response),
+			onError: (response, status) => this.addError(response),
+			onComplete: () => this.gettingTextSamples = false
 		});
 		this.recordingsGetter = new RecordingsGetter(csrfToken, {
 			url: '{% url "getRecordings" %}',
-			onSuccess: (response) => {
-				this.onGetRecordingSuccess(response);
-			},
-			onError: (response, status) => {
-				// TODO: Display get recordings error
-			},
-			onComplete: () => {
-				this.gettingRecordings = false;
-			}
+			onSuccess: (response) => this.onGetRecordingSuccess(response),
+			onError: (response, status) => this.addError(response),
+			onComplete: () => this.gettingRecordings = false
 		});
 		this.textSamplesImporter = new TextSamplesImporter(csrfToken, {
 			url: '{% url "importTextSamples" %}',
-			onSuccess: (response) => {
-				// TODO: Display completion of text sample import.
-			},
-			onError: (response, status) => {
-				// TODO: Display import error
-			},
-			onComplete: () => {
-				this.importingTextSamples = false;
-			}
+			onSuccess: (response) => this.addSuccess('Text samples imported.'),
+			onError: (response, status) => this.addError(response),
+			onComplete: () => this.importingTextSamples = false
 		});
 	},
-	computed: {signedIn: function() { return this.user.id; },
+	computed: {
+		signedIn: function() { return this.user.id; },
 		hasRecordings: function() { return this.recordingCount > 0; },
 		processingNewRecording: function() { return this.interpretingRecording || this.uploadingNewRecording; },
 		resultsHistoryClass: function() {
@@ -212,14 +167,7 @@ let vue = new Vue({
 			resultsHistoryClass.disabled = !this.hasRecordings;
 			return resultsHistoryClass;
 		},
-		maxTextSampleId: function() {
-			let max = 0;
-			for (var i = this.textSamples.length - 1; i >= 0; i--) {
-				let id = this.textSamples[i].id;
-				if (id > max) max = id;
-			}
-			return max;
-		}
+		maxTextSampleId: function() { return Math.max(...this.textSamples.map(textSample => textSample.id)); }
 	},
 	methods: {
 		headerClass: function(tab) {
@@ -329,6 +277,27 @@ let vue = new Vue({
 		onGetRecordingSuccess: function(response) {
 			this.recordedSinceGetRecordings = false;
 			this.recordings = response.recordings;
+		},
+		reportDone: function(error) {
+			this.reports.splice(this.reports.indexOf(error), 1);
+		},
+		addError: function(error) {
+			this.addReport(error, 'error');
+		},
+		addSuccess: function(success) {
+			this.addReport(success, 'success');
+		},
+		addReport: function(value, type) {
+			let report = {
+				value: value,
+				type: type,
+				done: false
+			};
+			this.reports.push(report);
+			setTimeout(() => {
+				report.done = true;
+				if (this.reports.indexOf(report) == this.reports.length - 1) this.reports = [];
+			}, 6500);
 		}
 	}
 });

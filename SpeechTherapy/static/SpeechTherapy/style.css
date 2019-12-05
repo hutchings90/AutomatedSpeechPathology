@@ -42,6 +42,33 @@
 	cursor: initial;
 }
 
+.reports {
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+}
+
+.reports .report-container {
+	text-align: center;
+	margin-bottom: 5px;
+}
+
+.reports .report-container .report {
+	display: inline-block;
+	padding: 10px;
+	color: white;
+	width: 300px;
+	animation: fadeout 1.5s linear 5s forwards;
+}
+
+.reports .report-container .report.error {
+	background: red;
+}
+
+.reports .report-container .report.success {
+	background: green;
+}
+
 #tab-content {
 	text-align: center;
 }
@@ -56,6 +83,7 @@
 
 .new-recording-prompt {
 	display: inline-block;
+	margin-bottom: 10px;
 }
 
 .new-recording-data {
@@ -175,4 +203,10 @@ canvas {
 	width: 300px;
 	height: 100px;
 	margin-bottom: 20px;
+}
+
+@keyframes fadeout {
+	to {
+		opacity: 0;
+	}
 }

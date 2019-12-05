@@ -1,20 +1,21 @@
 class SpeechToText {
-	constructor(onSuccess, onError, onComplete) {
-		this.onSuccess = onSuccess;
-		this.onError = onError;
-		this.onComplete = onComplete;
+	constructor(handlers) {
+		Object.assign(this, handlers);
 		this.data = null;
 	}
 
-	_onSuccess(displayText) {
-		this.data.interpretation = displayText;
+	onSuccess(response) {}
+	_onSuccess(response) {
+		this.data.interpretation = response;
 		this.onSuccess(this.data);
 	}
 
+	onError(response, status) {}
 	_onError(response, status) {
 		this.onError(response, status);
 	}
 
+	onComplete(response) {}
 	_onComplete(response) {
 		this.onComplete(response);
 	}

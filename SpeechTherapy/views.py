@@ -75,6 +75,7 @@ def index(request):
 			'importingTextSamples': False,
 			'interpretation': '',
 			'score': -1,
+			'reports': []
 		}),
 		'csrfToken': csrf.get_token(request)
 	})
@@ -108,7 +109,7 @@ def signIn(request):
 	user = authenticate(username=username, password=password)
 
 	if not user:
-		return HttpResponseNotFound('user not found')
+		return HttpResponseNotFound('Invalid username/password combination.')
 
 	login(request, user)
 
@@ -135,10 +136,7 @@ def signOut(request):
 
 def updateUser(request):
 	if not request.user.is_authenticated:
-		return HttpResponseNotFound(json.dumps({
-			'message': 'User not found.',
-			'user': request.user.id
-		}))
+		return HttpResponseNotFound('Please log in to update profile.')
 
 	user = request.user
 	post = request.POST

@@ -1,14 +1,12 @@
 class MicrosoftCognitiveServices extends SpeechToText {
-	constructor(subscriptionKey, tokenUrl, speechToTextUrl, onSuccess, onError, onComplete) {
-		super(onSuccess, onError, onComplete);
+	constructor(subscriptionKey, tokenUrl, speechToTextUrl, handlers) {
+		super(handlers);
 		this.issueTokenXHR = new XHR({
 			url: tokenUrl,
 			headers: {
 				'Ocp-Apim-Subscription-Key': subscriptionKey
 			},
-			onSuccess: (response) => {
-				this.getTextFromRecording(response);
-			},
+			onSuccess: (response) => this.getTextFromRecording(response),
 			onError: (response, status) => {
 				this._onError(response, status);
 				// Call onComplete since it won't get called by speechToTextXHR's onComplete
@@ -22,12 +20,8 @@ class MicrosoftCognitiveServices extends SpeechToText {
 				if (response.RecognitionStatus == 'Success') this._onSuccess(response.DisplayText);
 				else this._onError(response.RecognitionStatus, 200);
 			},
-			onError: (response, status) => {
-				this._onError(response, status);
-			},
-			onComplete: (response) => {
-				this._onComplete(response);
-			}
+			onError: (response, status) => this._onError(response, status),
+			onComplete: (response) => this._onComplete(response)
 		});
 	}
 

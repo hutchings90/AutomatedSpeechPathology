@@ -9,7 +9,7 @@ Vue.component('recordings', {
 				<input v-model.number='activePageNumber' :value='pageNumber' type='radio' class='hide'/>
 				<span v-html='pageNumber'></span>
 			</label>
-			<div v-show='showResultsPerPageInput' class='results-per-page-input'>
+			<div class='results-per-page-input'>
 				<label>Results per page:</label>
 				<input v-model.number.lazy='recordsPerPage' type='number' min='10' class='records-per-page'/>
 			</div>
@@ -49,7 +49,6 @@ Vue.component('recordings', {
 		hasMultiplePages: function() { return this.pageCount > 1; },
 		showFilters: function() { return this.hasRecordings; },
 		showPageNumbers: function() { return this.hasMultiplePages; },
-		showResultsPerPageInput: function() { return this.hasMultiplePages; }
 	},
 	watch: {
 		shown: function() {
@@ -59,8 +58,7 @@ Vue.component('recordings', {
 			this.resetRecordings();
 		},
 		activePageNumber: function() {
-			if (this.recordsPerPage < 1) this.recordsPerPage = 1;
-			else this.getRecordings();
+			this.getRecordings();
 		},
 		recordsPerPage: function() {
 			if (this.recordsPerPage < 10) this.recordsPerPage = 10;

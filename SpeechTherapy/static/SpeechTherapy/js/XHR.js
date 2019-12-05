@@ -1,8 +1,6 @@
 class XHR {
 	constructor(options) {
-		for (let option in options) {
-			this[option] = options[option];
-		}
+		Object.assign(this, options);
 		if (!this.headers) this.headers = {};
 		if (!this.method) this.method = 'POST';
 	}
@@ -11,9 +9,7 @@ class XHR {
 		let request = new XMLHttpRequest();
 		request.open(this.method, this.url);
 		request.withCredentials = this.withCredentials;
-		for (let key in this.headers) {
-			request.setRequestHeader(key, this.headers[key]);
-		}
+		Object.keys(this.headers).forEach(key => request.setRequestHeader(key, this.headers[key]));
 		request.onreadystatechange = () => {
 			if (request.readyState == 4) {
 				if (request.status == 200) {
