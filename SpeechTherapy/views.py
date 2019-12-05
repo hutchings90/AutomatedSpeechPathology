@@ -3,6 +3,7 @@ from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.middleware import csrf
+from django.core.mail import send_mail
 
 from datetime import datetime
 import json, zipfile, io
@@ -75,17 +76,33 @@ def index(request):
 			'importingTextSamples': False,
 			'interpretation': '',
 			'score': -1,
-			'reports': []
+			'reports': [],
+			'sendingSignInHelpEmail': False
 		}),
 		'csrfToken': csrf.get_token(request)
 	})
 
 def signUp(request):
+	errors = []
 	post = request.POST
 
 	username = post.get('username')
 	email = post.get('email')
 	password = post.get('password')
+
+	if not username:
+		errors.append('Username required.')
+
+	if not password:
+		errors.append('Password required.')
+
+	if not email:
+		errors.append('Email required.')
+
+	if len(errors) > 0:
+		return HttpResponse(json.dumps({
+			'errors': errors
+		}))
 
 	user = User.objects.create_user(username, email=email, password=password)
 	user.save()
@@ -120,6 +137,14 @@ def signIn(request):
 		'textSamples': getTextSampleData(),
 		'csrfToken': csrf.get_token(request)
 	}))
+
+def sendSignInHelpEmail(request):
+	send_mail('Automated Speech Therapy Sign In Help'
+		'Here is the message',
+		'jdanhutch@gmail.com',
+		[ request.user.email ],
+		fail_silently=False
+	),
 
 def getTextSamples(request):
 	return HttpResponse(json.dumps({

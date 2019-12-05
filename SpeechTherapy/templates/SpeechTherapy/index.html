@@ -15,6 +15,7 @@
 <script src='{% static "SpeechTherapy/js/UpSigner.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/OutSigner.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/InSigner.js" %}'></script>
+<script src='{% static "SpeechTherapy/js/SignInHelper.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/ProfileUpdater.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/SpeechToText.js" %}'></script>
 <script src='{% static "SpeechTherapy/js/MicrosoftCognitiveServices.js" %}'></script>
@@ -64,6 +65,7 @@
 				@right-extra-clicked='signOut'
 				:user='user'
 				:processing='signingOut'
+				:show-password='true'
 				:right-extra='"Sign Out"'></profile-form>
 			<div v-if='user.is_superuser' class='admin-wrapper'>
 				<admin-form
@@ -80,20 +82,29 @@
 				:user='user'
 				:processing='signingUp'
 				:submit-text='"Sign Up"'
-				:action='"/SpeechTherapy/signUp"'
+				:show-password='true'
 				:show-email='true'
 				:right-extra='"Back"'></profile-form>
 			<profile-form
 				v-show='activeTab == "signIn"'
 				@submit='signIn'
 				@right-extra-clicked='activateTab("signUp")'
-				@left-extra-clicked='forgotPassword'
+				@left-extra-clicked='getSignInHelp'
 				:user='user'
 				:processing='signingIn'
 				:submit-text='"Sign In"'
-				:action='"/SpeechTherapy/signIn"'
+				:show-password='true'
 				:left-extra='"Need help signing in?"'
 				:right-extra='"Sign up"'></profile-form>
+			<profile-form
+				v-show='activeTab == "signInHelp"'
+				@submit='sendSignInHelpEmail'
+				@right-extra-clicked='endSignInHelp'
+				:user='user'
+				:processing='sendingSignInHelpEmail'
+				:submit-text='"Submit"'
+				:right-extra='"Cancel"'
+				:notes='"If the username is found, an email will be sent to the associated email address with a temporary password."'></profile-form>
 		</template>
 	</div>
 </div>
@@ -103,60 +114,8 @@ let vue = new Vue({
 	el: '#speech-therapy-app',
 	data: JSON.parse('{{ data | escapejs }}'),
 	created: function() {
-		let csrfToken = '{{ csrfToken }}';
-		this.upSigner = new UpSigner(csrfToken, {
-			url: '{% url "signUp" %}',
-			onSuccess: (response) => this.onSignUpSuccess(response),
-			onError: (response, status) => this.addError(response),
-			onComplete: () => this.signingUp = false
-		});
-		this.outSigner = new OutSigner(csrfToken, {
-			url: '{% url "signOut" %}',
-			onSuccess: (response) => this.onSignOutSuccess(response),
-			onError: (response, status) => this.addError(response),
-			onComplete: () => this.signingOut = false
-		});
-		this.inSigner = new InSigner(csrfToken, {
-			url: '{% url "signIn" %}',
-			onSuccess: (response) => this.onSignInSuccess(response),
-			onError: (response, status) => this.addError(response),
-			onComplete: () => this.signingIn = false
-		});
-		this.profileUpdater = new ProfileUpdater(csrfToken, {
-			url: '{% url "updateUser" %}',
-			onSuccess: (response) => this.onUpdateUserSuccess(response),
-			onError: (response, status) => this.addError(response),
-			onComplete: () => this.updatingUser = false
-		});
-		this.newRecordingInterpreter = new NewRecordingInterpreter({
-			onSuccess: (data) => this.handleRecordingInterpretation(data),
-			onError: (response, status) => this.addError(response),
-			onComplete: (response) => this.interpretingRecording = false
-		});
-		this.newRecordingUploader = new RecordingUploader(csrfToken, {
-			url: '{% url "newRecording" %}',
-			onSuccess: (response) => this.onNewRecordingSuccess(response),
-			onError: (response, status) => this.addError(response),
-			onComplete: () => this.uploadingNewRecording = false
-		});
-		this.newTextSamplesGetter = new NewTextSamplesGetter(csrfToken, {
-			url: '{% url "getTextSamples" %}',
-			onSuccess: (response) => this.onGetNewTextSampleSuccess(response),
-			onError: (response, status) => this.addError(response),
-			onComplete: () => this.gettingTextSamples = false
-		});
-		this.recordingsGetter = new RecordingsGetter(csrfToken, {
-			url: '{% url "getRecordings" %}',
-			onSuccess: (response) => this.onGetRecordingSuccess(response),
-			onError: (response, status) => this.addError(response),
-			onComplete: () => this.gettingRecordings = false
-		});
-		this.textSamplesImporter = new TextSamplesImporter(csrfToken, {
-			url: '{% url "importTextSamples" %}',
-			onSuccess: (response) => this.addSuccess('Text samples imported.'),
-			onError: (response, status) => this.addError(response),
-			onComplete: () => this.importingTextSamples = false
-		});
+		this.initXHRs('{{ csrfToken }}');
+		this.initNewRecordingInterpreter();
 	},
 	computed: {
 		signedIn: function() { return this.user.id; },
@@ -170,6 +129,70 @@ let vue = new Vue({
 		maxTextSampleId: function() { return Math.max(...this.textSamples.map(textSample => textSample.id)); }
 	},
 	methods: {
+		initXHRs: function(csrfToken) {
+			this.xhrs = {};
+			this.addXHR('upSigner', new UpSigner(csrfToken, {
+				url: '{% url "signUp" %}',
+				onSuccess: (response) => this.onSignUpSuccess(response),
+				onError: (response, status) => this.addError(response),
+				onComplete: () => this.signingUp = false
+			}));
+			this.addXHR('outSigner', new OutSigner(csrfToken, {
+				url: '{% url "signOut" %}',
+				onSuccess: (response) => this.onSignOutSuccess(response),
+				onError: (response, status) => this.addError(response),
+				onComplete: () => this.signingOut = false
+			}));
+			this.addXHR('inSigner', new InSigner(csrfToken, {
+				url: '{% url "signIn" %}',
+				onSuccess: (response) => this.onSignInSuccess(response),
+				onError: (response, status) => this.addError(response),
+				onComplete: () => this.signingIn = false
+			}));
+			this.addXHR('signInHelper', new SignInHelper(csrfToken, {
+				url: '{% url "sendSignInHelpEmail" %}',
+				onSuccess: (response) => this.onSignInHelpSuccess(response),
+				onError: (response, status) => this.addError(response),
+				onComplete: () => this.help = false
+			}));
+			this.addXHR('profileUpdater', new ProfileUpdater(csrfToken, {
+				url: '{% url "updateUser" %}',
+				onSuccess: (response) => this.onUpdateUserSuccess(response),
+				onError: (response, status) => this.addError(response),
+				onComplete: () => this.updatingUser = false
+			}));
+			this.addXHR('newRecordingUploader', new RecordingUploader(csrfToken, {
+				url: '{% url "newRecording" %}',
+				onSuccess: (response) => this.onNewRecordingSuccess(response),
+				onError: (response, status) => this.addError(response),
+				onComplete: () => this.uploadingNewRecording = false
+			}));
+			this.addXHR('newTextSamplesGetter', new NewTextSamplesGetter(csrfToken, {
+				url: '{% url "getTextSamples" %}',
+				onSuccess: (response) => this.onGetNewTextSampleSuccess(response),
+				onError: (response, status) => this.addError(response),
+				onComplete: () => this.gettingTextSamples = false
+			}));
+			this.addXHR('recordingsGetter', new RecordingsGetter(csrfToken, {
+				url: '{% url "getRecordings" %}',
+				onSuccess: (response) => this.onGetRecordingSuccess(response),
+				onError: (response, status) => this.addError(response),
+				onComplete: () => this.gettingRecordings = false
+			}));
+			this.addXHR('textSamplesImporter', new TextSamplesImporter(csrfToken, {
+				url: '{% url "importTextSamples" %}',
+				onSuccess: (response) => this.addSuccess('Text samples imported.'),
+				onError: (response, status) => this.addError(response),
+				onComplete: () => this.importingTextSamples = false
+			}));
+		},
+		initNewRecordingInterpreter: function() {
+			this.newRecordingInterpreter = new NewRecordingInterpreter({
+				onSuccess: (data) => this.handleRecordingInterpretation(data),
+				onError: (response, status) => this.addError(response),
+				onComplete: (response) => this.interpretingRecording = false
+			});
+		},
 		headerClass: function(tab) {
 			return {
 				active: tab == this.activeTab
@@ -184,40 +207,52 @@ let vue = new Vue({
 		},
 		signUp: function() {
 			this.signingUp = true;
-			this.upSigner.submit(this.user);
+			this.xhrs.upSigner.submit(this.user);
 		},
 		signIn: function() {
 			this.signingIn = true;
-			this.inSigner.submit(this.user.username, this.user.password);
+			this.xhrs.inSigner.submit(this.user.username, this.user.password);
 		},
-		forgotPassword: function() {
-			// TODO: Implement forgot password
+		getSignInHelp: function() {
+			this.activeTab = 'signInHelp';
+		},
+		sendSignInHelpEmail: function() {
+			this.sendingSignInHelpEmail = true;
+			this.xhrs.signInHelper.submit(user.username);
+		},
+		onSignInHelpSuccess: function(response) {
+			this.addSuccess('Email sent.');
+			this.endSignInHelp();
+		},
+		endSignInHelp: function() {
+			this.activeTab = 'signIn';
+			this.sendSignInHelpEmail = false;
 		},
 		signOut: function() {
 			this.signingOut = true;
-			this.outSigner.submit();
+			this.xhrs.outSigner.submit();
 		},
 		getNewTextSamples: function() {
 			this.gettingTextSamples = true;
-			this.newTextSamplesGetter.submit(this.maxTextSampleId);
+			this.xhrs.newTextSamplesGetter.submit(this.maxTextSampleId);
 		},
 		getRecordings: function(data) {
 			this.gettingRecordings = true;
-			this.recordingsGetter.submit(data.page, data.recordsPerPage);
+			this.xhrs.recordingsGetter.submit(data.page, data.recordsPerPage);
 		},
 		updateUser: function(attr) {
 			this.updatingUser = true;
-			this.profileUpdater.submit(attr, this.user[attr]);
+			this.xhrs.profileUpdater.submit(attr, this.user[attr]);
 		},
 		importTextSamples: function(file) {
 			this.importingTextSamples = true;
-			this.textSamplesImporter.submit(file);
+			this.xhrs.textSamplesImporter.submit(file);
 		},
 		handleNewRecording: function(data) {
 			this.interpretingRecording = true;
 			this.interpretation = '';
 			this.score = -1;
-			this.newRecordingInterpreter.submit(data);
+			this.xhrs.newRecordingInterpreter.submit(data);
 		},
 		handleRecordingInterpretation: function(data) {
 			this.interpretation = data.interpretation;
@@ -225,19 +260,22 @@ let vue = new Vue({
 		},
 		saveNewRecording: function(data) {
 			this.uploadingNewRecording = true;
-			this.newRecordingUploader.submit(data);
+			this.xhrs.newRecordingUploader.submit(data);
+		},
+		addXHR: function(key, xhr) {
+			this.xhrs[key] = xhr;
 		},
 		updateCSRFToken: function(csrfToken) {
-			this.upSigner.updateCSRFToken(csrfToken);
-			this.outSigner.updateCSRFToken(csrfToken);
-			this.inSigner.updateCSRFToken(csrfToken);
-			this.profileUpdater.updateCSRFToken(csrfToken);
-			this.newRecordingUploader.updateCSRFToken(csrfToken);
-			this.newTextSamplesGetter.updateCSRFToken(csrfToken);
-			this.recordingsGetter.updateCSRFToken(csrfToken);
-			this.textSamplesImporter.updateCSRFToken(csrfToken);
+			for (let key in this.xhrs) {
+				this.xhrs[key].updateCSRFToken(csrfToken);
+			}
 		},
 		onSignUpSuccess: function(response) {
+			if (response.errors) {
+				this.addError(response.errors.join('<br>'));
+				return;
+			}
+
 			this.user = response.user;
 			this.recordings = response.recordings;
 			this.recordingCount = response.recordingCount;

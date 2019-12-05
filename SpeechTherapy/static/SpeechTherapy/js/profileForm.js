@@ -1,13 +1,13 @@
 Vue.component('profile-form', {
-	props: [ 'user', 'processing', 'submitText', 'action', 'showEmail', 'leftExtra', 'rightExtra' ],
+	props: [ 'user', 'processing', 'submitText', 'showPassword', 'showEmail', 'leftExtra', 'rightExtra', 'notes' ],
 	template: `<div>
-		<form @submit.prevent='submit($event)' :action='action' method='POST'>
+		<form @submit.prevent='submit($event)' method='POST'>
 			<div>
 				<label>Username <span class='required'>*</span></label>
 				<br>
 				<input name='username' v-model.lazy='user.username' @change='updateAttr("username")' type='username' autofocus/>
 			</div>
-			<div>
+			<div v-if='showPassword'>
 				<label>Password <span class='required'>*</span></label>
 				<br>
 				<input name='password' v-model.lazy='user.password' @change='updateAttr("password")' type='password'/>
@@ -23,6 +23,7 @@ Vue.component('profile-form', {
 			<a v-if='leftExtra' v-html='leftExtra' @click='leftExtraClicked' class='left'></a>
 			<a v-if='rightExtra' v-html='rightExtra' @click='rightExtraClicked' class='right'></a>
 		</div>
+		<p class='profile-form-notes' v-html='notes'></p>
 	</div>`,
 	methods: {
 		updateAttr: function(attr) {
