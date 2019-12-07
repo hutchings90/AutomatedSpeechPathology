@@ -90,6 +90,14 @@
 	margin-top: 10px;
 }
 
+.new-recording-result-interpretation {
+	text-align: left;
+}
+
+.new-recording-result-header {
+	margin-bottom: 5px;
+}
+
 .extra-links > a {
 	cursor: pointer;
 	font-size: 14px;
@@ -123,6 +131,7 @@
 	border-radius: 2px;
 	padding: 3px 5px;
 	cursor: pointer;
+	min-width: 44px;
 }
 
 .page-marker:not(:last-child) {
@@ -134,13 +143,10 @@
 	color: white;
 }
 
-.records-per-page {
-	width: 50px;
-}
-
 .recordings-table  {
 	display: inline-block;
 	border-collapse: collapse;
+	max-width: 100%;
 }
 
 .recordings-table thead {
@@ -174,16 +180,29 @@
 	width: 30px;
 }
 
+.recordings-table tbody tr td.text-sample-cell {
+	text-align: left;
+	padding-right: 10px;
+}
+
 .checkbox-button {
 	cursor: pointer;
 }
 
-.checkbox-button input {
+input[type='checkbox'].button, input[type='radio'].button {
 	display: none;
 }
 
-.results-per-page-input {
-	margin: 10px 0;
+.total-page-report {
+	margin: 5px 0;
+}
+
+.recordings-page-input-container {
+	margin-bottom: 10px;
+}
+
+.recordings-page-input-container input {
+	width: 50px;
 }
 
 body {

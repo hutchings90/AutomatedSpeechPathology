@@ -2,9 +2,9 @@ Vue.component('recording', {
 	props: [ 'recording', 'audioRecording' ],
 	template: `<tr>
 		<td class='audio-controls'>
-			<label class='checkbox-button'>
+			<label>
 				<span v-html='playHTML'></span>
-				<input v-model='shouldPlay' type='checkbox'/>
+				<input v-model='shouldPlay' type='checkbox' class='button'/>
 			</label>
 			<audio ref='audio' :src='recording.audioSrc' @ended='stop'></audio>
 		</td>
@@ -12,7 +12,7 @@ Vue.component('recording', {
 			<div v-html='dateDisplay'></div>
 			<div v-html='timeDisplay'></div>
 		</td>
-		<td>
+		<td class='text-sample-cell'>
 			<div>
 				<pre v-html='recording.text' class='sample-text'></pre>
 			</div>

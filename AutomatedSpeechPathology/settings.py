@@ -122,3 +122,13 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+# Uncomment for email support.
+#| EMAIL_HOST and EMAIL_POST set for gmail, although it has not been confirmed to work.
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_POST = 465
+# EMAIL_HOST_USER = ''
+# EMAIL_HOST_PASSWORD = ''
+# EMAIL_USE_SSL = True
+# EMAIL_USE_TLS = False

@@ -1,6 +1,6 @@
 class MicrosoftCognitiveServices extends SpeechToText {
 	constructor(subscriptionKey, tokenUrl, speechToTextUrl, handlers) {
-		super(handlers);
+		super('Microsoft Cognitive Services', handlers);
 		this.issueTokenXHR = new XHR({
 			url: tokenUrl,
 			headers: {

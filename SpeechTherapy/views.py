@@ -6,7 +6,7 @@ from django.middleware import csrf
 from django.core.mail import send_mail
 
 from datetime import datetime
-import json, zipfile, io
+import json, zipfile, io, random
 
 from .models import *
 
@@ -22,12 +22,12 @@ def getUserData(user):
 		'is_superuser': user.is_superuser
 	}
 
-def getUsersRecordingsData(user, page=1, recordsPerPage=10):
+def getUsersRecordingsData(user, page=1, recordingsPerPage=10):
 	recordings = []
 
 	if Recording.objects.filter(user_id=user.id).count():
-		start = (page - 1) * recordsPerPage
-		end = page * recordsPerPage
+		start = (page - 1) * recordingsPerPage
+		end = page * recordingsPerPage
 
 		for recording in Recording.objects.order_by('-date_recorded').filter(user_id=user.id)[start:end:1]:
 			recordings.append(recording.data())
@@ -68,16 +68,21 @@ def index(request):
 			'signingOut': False,
 			'updatingProfile': False,
 			'gettingTextSamples': False,
-			'gettingRecordings': False,
+			'lastGetTextSamplesTs': None,
+			'pageNumberAfterGetRecordings': 1,
+			'sharedRecordingsData': {
+				'recordingsPerPage': 10
+			},
+			'lastGetRecordingsTs': None,
 			'interpretingRecording': False,
+			'newRecordingTs': None,
 			'uploadingNewRecording': False,
-			'recordedSinceGetRecordings': False,
-			'recording': None,
 			'importingTextSamples': False,
 			'interpretation': '',
 			'score': -1,
 			'reports': [],
-			'sendingSignInHelpEmail': False
+			'sendingSignInHelpEmail': False,
+			'newRecordingResults': []
 		}),
 		'csrfToken': csrf.get_token(request)
 	})
@@ -139,16 +144,29 @@ def signIn(request):
 	}))
 
 def sendSignInHelpEmail(request):
-	send_mail('Automated Speech Therapy Sign In Help'
+	username = request.POST.get('username')
+
+	try:
+		user = User.objects.get(username=username)
+	except User.DoesNotExist as e:
+		return HttpResponseNotFound('User not found.')
+
+	if sentEmailCount < 1:
+		return HttpResponseNotFound('Email not sent. Please contact an administrator.')
+
+	user.email_user('Automated Speech Therapy Sign In Help',
 		'Here is the message',
-		'jdanhutch@gmail.com',
-		[ request.user.email ],
 		fail_silently=False
-	),
+	)
+
+	return HttpResponse()
 
 def getTextSamples(request):
+	post = request.POST
+
 	return HttpResponse(json.dumps({
-		'textSamples': getTextSampleData(request.POST.get('id'))
+		'textSamples': getTextSampleData(post.get('id')),
+		'ts': post.get('ts')
 	}))
 
 def signOut(request):
@@ -187,10 +205,12 @@ def getRecordings(request):
 	post = request.POST
 
 	page = int(post.get('page'))
-	recordsPerPage = int(post.get('recordsPerPage'))
+	recordingsPerPage = int(post.get('recordingsPerPage'))
 
 	return HttpResponse(json.dumps({
-		'recordings': getUsersRecordingsData(request.user, page, recordsPerPage)
+		'recordings': getUsersRecordingsData(request.user, page, recordingsPerPage),
+		'pageNumberAfterGetRecordings': int(post.get('pageNumberAfterGetRecordings')),
+		'ts': int(post.get('ts'))
 	}))
 
 def newRecording(request):
@@ -199,21 +219,26 @@ def newRecording(request):
 	files = request.FILES
 
 	text_sample_id = post.get('text_sample_id')
+	ts = post.get('ts')
 	audio = files.get('audio')
+	textSample = TextSample.objects.get(pk=text_sample_id)
 	interpretation = post.get('interpretation')
 
 	recording = Recording()
-	recording.date_recorded = datetime.now()
+	recording.date_recorded = ts
 	recording.user = user
 	recording.audio = audio
-	recording.text_sample = TextSample.objects.get(pk=text_sample_id)
+	recording.text_sample = textSample
 	recording.interpretation = interpretation
 	recording.assignScore()
 	recording.save()
 
 	return HttpResponse(json.dumps({
 		'recording': recording.data(),
-		'recordingCount': getRecordingCount(user)
+		'recordings': getUsersRecordingsData(user, 1, int(post.get('recordingsPerPage'))),
+		'recordingCount': getRecordingCount(user),
+		'newRecordingResultsIndex': int(post.get('newRecordingResultsIndex')),
+		'ts': int(post.get('ts'))
 	}))
 
 def importTextSamples(request):
@@ -242,3 +267,28 @@ def importTextSamples(request):
 	return HttpResponse(json.dumps({
 		'numCreated': numCreated
 	}))
+
+def demoSpeechAnalyzer(request):
+	return HttpResponse(random.choice([
+		# First ten Harvard Sentences
+		'Glue the sheet to the dark blue background.'
+		'It\'s easy to tell the depth of a well.',
+		'These days a chicken leg is a rare dish.',
+		'Rice is often served in round bowls.',
+		'The juice of lemons makes fine punch.',
+		'The box was thrown beside the parked truck.',
+		'The hogs were fed chopped corn and garbage.',
+		'Four hours of steady work faced us.',
+		'Large size in stockings is hard to sell.',
+		'The birch canoe slid on the smooth planks.',
+		# Every tenth Harvard Sentence, beginning at 20
+		'A rod is used to catch pink salmon.',
+		'The fish twisted and turned on the bent hook.',
+		'Take the winding path to reach the lake.',
+		'The ship was torn apart on the sharp reef.',
+		'The crooked maze failed to fool the mouse.',
+		'Use a pencil to write the first draft.',
+		'The two met while playing on the sand.',
+		'See the cat glaring at the scared mouse.',
+		'A wisp of cloud hung in the blue air.',
+	]))

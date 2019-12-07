@@ -12,7 +12,7 @@ class TextSample(models.Model):
 
 class Recording(models.Model):
 	user = models.ForeignKey(User, on_delete=models.PROTECT)
-	date_recorded = models.DateTimeField()
+	date_recorded = models.BigIntegerField()
 	text_sample = models.ForeignKey(TextSample, on_delete=models.PROTECT)
 	audio = models.FileField(upload_to='audio/%Y/%m/%d/')
 	interpretation = models.TextField()

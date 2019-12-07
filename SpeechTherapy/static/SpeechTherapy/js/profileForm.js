@@ -13,7 +13,7 @@ Vue.component('profile-form', {
 				<input name='password' v-model.lazy='user.password' @change='updateAttr("password")' type='password'/>
 			</div>
 			<div v-if='showEmail'>
-				<label>Email</label>
+				<label>Email <span class='required'>*</span></label>
 				<br>
 				<input name='email' v-model.lazy='user.email' @change='updateAttr("email")' type='email'/>
 			</div>

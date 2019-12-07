@@ -3,37 +3,38 @@
  * Recording and WAV encoding based on Matt Diamond's work at https://github.com/mattdiamond/Recorderjs.
  */
 Vue.component('new-recording', {
-	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples', 'interpretation', 'score' ],
+	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples', 'results' ],
 	template: `<div>
-		<div v-if='showBrowserRecordingSupportError'>Failed to access audio.</div>
-		<div v-else>
+		<div v-if='!gettingStream && failedToGetUserMedia'>Audio cannot be recorded. Could not access recording device.</div>
+		<div v-show='!gettingStream && !failedToGetUserMedia'>
 			<div>
 				<canvas ref='analyser' width='1024' height='500'></canvas>
 			</div>
-			<div class='new-recording-prompt'>
-				<div>
-					<button @click='prevTextSample' :disabled='disableTextSampleControls'><</button>
-					<button @click='getNewTextSamples' :disabled='disableTextSampleControls'>New Phrases</button>
-					<button @click='nextTextSample' :disabled='disableTextSampleControls'>></button>
-					<p v-html='activeTextSample.text'></p>
+			<div v-if='textSamples.length < 1'>No text samples were found.</div>
+			<div v-else>
+				<div class='new-recording-prompt'>
+					<div>
+						<button @click='prevTextSample' :disabled='disableTextSampleControls'><</button>
+						<button @click='getNewTextSamples' :disabled='disableTextSampleControls'>New Phrases</button>
+						<button @click='nextTextSample' :disabled='disableTextSampleControls'>></button>
+						<p v-html='activeTextSample.text'></p>
+					</div>
+					<button @click='beginRecording' v-show='!listening' :disabled='disableRecordingControls'>Record</button>
+					<button @click='endRecording' v-show='listening' :disabled='disableRecordingControls'>Stop</button>
 				</div>
-				<button @click='beginRecording' v-show='!listening' :disabled='disableRecordingControls'>Record</button>
-				<button @click='endRecording' v-show='listening' :disabled='disableRecordingControls'>Stop</button>
-			</div>
-			<div>
-				<label>
-					<input v-model='autoPlay' type='checkbox'/>Autplay audio
-				</label>
-			</div>
-			<div v-show='showNewRecordingData' class='new-recording-data'>
-				<audio ref='audioElement' :src='audioSrc' controls></audio>
-				<p v-if='interpretation'>Interpretation: <span v-html='interpretation'></span></p>
-				<p v-else>Audio recorded. Processing...</p>
-				<template v-if='score >= 0'>
-					<p>Score: <span v-html='score'></span>%</p>
-					<p>Recording Uploaded</p>
-				</template>
-				<p v-else-if='interpretation'>Audio processed. Uploading data...</p>
+				<div>
+					<label>
+						<input v-model='autoPlay' type='checkbox'/>Autoplay audio
+					</label>
+				</div>
+				<div v-if='hasRecorded' class='new-recording-data'>
+					<audio ref='audioElement' :src='audioSrc' controls></audio>
+					<new-recording-result
+						v-for='(result, i) in results'
+						:key='i'
+						:result='result'
+						:is-recording='listening'></new-recording-result>
+				</div>
 			</div>
 		</div>
 	</div>`,
@@ -43,16 +44,21 @@ Vue.component('new-recording', {
 	},
 	data: function() {
 		return {
+			gettingStream: true,
+			failedToGetUserMedia: true,
+			textSamplesGotten: true,
 			autoPlay: true,
+			hasRecorded: false,
+			listening: false,
+			audioSrc: '',
+			activeTextSampleIndex: 0,
+			// For recording audio
 			audioContext: null,
 			analyserContext: null,
 			analyserNode: null,
 			numBars: 100,
 			freqByteData: null,
-			activeTextSampleIndex: 0,
 			audioVisualizerInterval: null,
-			listening: false,
-			audioSrc: '',
 			timeout: null,
 			maxTime: 14000,
 			node: null,
@@ -61,14 +67,11 @@ Vue.component('new-recording', {
 			recLength: 0,
 			constraints: {
 				audio: true
-			},
-			textSamplesGotten: true,
-			failedToGetUserMedia: false
+			}
 		};
 	},
 	computed: {
-		browserSupportsRecording: function() { return navigator.mediaDevices || this.failedToGetUserMedia; },
-		showBrowserRecordingSupportError: function() { return !this.browserSupportsRecording; },
+		hasNoResults: function() { return this.results.length > 0; },
 		disableRecordingControls: function() { return this.processing || this.gettingTextSamples; },
 		disableTextSampleControls: function() { return this.listening || this.disableRecordingControls; },
 		showNewRecordingData: function() { return this.audioSrc && !this.listening; },
@@ -82,7 +85,7 @@ Vue.component('new-recording', {
 			if (this.textSamples.length < 1) {
 				let textSample = {
 					id: null,
-					text: 'No text samples were found.'
+					text: ''
 				};
 				if (!this.gettingTextSamples && !this.textSamplesGotten) {
 					textSample.text += ' Searching for new text samples...';
@@ -105,20 +108,20 @@ Vue.component('new-recording', {
 	methods: {
 		initMediaDevices: function() {
 			if (navigator.getUserMedia) {
-				navigator.getUserMedia(this.constraints, (stream) => this.gotStream(stream), (err) => {
+				navigator.getUserMedia(this.constraints, stream => this.gotStream(stream), err => {
 					alert('Unable to access audio.\n\n' + err);
 					console.log('The following error occurred: ' + err);
-					this.failedToGetUserMedia = true;
+					this.gettingStream = false;
 				});
 			}
-			else if (navigator.mediaDevices.getUserMedia) {
-				navigator.mediaDevices.getUserMedia(this.constraints).then((stream) => this.gotStream(stream)).catch((err) => {
+			else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+				navigator.mediaDevices.getUserMedia(this.constraints).then(stream => this.gotStream(stream)).catch(err => {
 					alert('Unable to access audio.\n\n' + err);
 					console.log('The following error occurred: ' + err);
-					this.failedToGetUserMedia = true;
+					this.gettingStream = false;
 				});
 			}
-			else this.failedToGetUserMedia = true;
+			else this.gettingStream = false;
 		},
 		nextTextSample: function() {
 			this.setActiveTextSamplePage(this.activeTextSampleIndex + 1);
@@ -140,6 +143,7 @@ Vue.component('new-recording', {
 			clearTimeout(this.timeout);
 			this.timeout = null;
 			this.listening = false;
+			this.hasRecorded = true;
 
 			let blob = this.exportWAV();
 			this.audioSrc = URL.createObjectURL(blob);
@@ -157,6 +161,7 @@ Vue.component('new-recording', {
 			this.recLength = 0;
 			this.listening = true;
 			this.timeout = setTimeout(() => this.endRecording(), this.maxTime);
+			this.$emit('recording-begun');
 		},
 		exportWAV: function() {
 			let buffers = [];
@@ -172,6 +177,9 @@ Vue.component('new-recording', {
 			return blob;
 		},
 		gotStream: function (stream) {
+			this.gettingStream = false;
+			this.failedToGetUserMedia = false;
+
 			this.audioContext = new AudioContext();
 			this.analyserNode = this.audioContext.createAnalyser();
 			this.analyserNode.fftSize = 2048;

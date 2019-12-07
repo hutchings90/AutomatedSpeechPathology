@@ -1,17 +1,28 @@
 Vue.component('recordings', {
-	props: [ 'recordings', 'recordingCount', 'gettingRecordings', 'shown', 'recordedSinceGetRecordings' ],
+	props: [ 'recordings', 'recordingCount', 'sharedData' ],
 	template: `<div>
-		<div v-show='showFilters'>
+		<div>
+			<button v-if='activePageNumber > 4'><<</button>
+			<button v-if='activePageNumber > 5'><</button>
 			<label class='page-marker'
-				v-show='showPageNumbers'
-				v-for='pageNumber in pageCount'
-				:class='{"active": pageNumber == activePageNumber }'>
-				<input v-model.number='activePageNumber' :value='pageNumber' type='radio' class='hide'/>
+				v-for='pageNumber in displayedPages'
+				:class='{"active": pageNumber == activePageNumber }'
+				:key='pageNumber'>
+				<input v-model.number='activePageNumber' :value='pageNumber' type='radio' class='button'/>
 				<span v-html='pageNumber'></span>
 			</label>
-			<div class='results-per-page-input'>
-				<label>Results per page:</label>
-				<input v-model.number.lazy='recordsPerPage' type='number' min='10' class='records-per-page'/>
+			<button v-if='activePageNumber < pageCount - 4'>></button>
+			<button v-if='activePageNumber < pageCount - 5'>>></button>
+			<div class='total-page-report'><span v-html='pageCount'></span> Pages</div>
+			<div class='recordings-page-input-container'>
+				<span>
+					<label>Current page:</label>
+					<input v-model.number.lazy='activePageNumber' type='number' min='1' max='pageCount'/>
+				</span>
+				<span>
+					<label>Results per page:</label>
+					<input v-model.number.lazy='recordingsPerPage' type='number' min='10'/>
+				</span>
 			</div>
 		</div>
 		<table class='recordings-table'>
@@ -37,46 +48,63 @@ Vue.component('recordings', {
 	data: function() {
 		return {
 			activePageNumber: 1,
-			recordsPerPage: 10,
 			sampleTextRecording: null,
 			audioRecording: null
 		};
 	},
 	computed: {
-		hasRecordings: function() { return this.recordings.length > 0; },
-		displayNoneFoundMessage: function() { return !this.hasRecordings && !this.gettingRecordings; },
-		pageCount: function() { return Math.ceil(this.recordingCount / this.recordsPerPage); },
-		hasMultiplePages: function() { return this.pageCount > 1; },
-		showFilters: function() { return this.hasRecordings; },
-		showPageNumbers: function() { return this.hasMultiplePages; },
+		pageCount: function() { return Math.ceil(this.recordingCount / this.recordingsPerPage); },
+		displayedPages: function() {
+			let min = Math.max(1, this.activePageNumber - 3);
+			let max = Math.min(this.pageCount, min + 6);
+			let pages = [];
+
+			if (max - 6 < min) min = Math.max(1, max - 6);
+
+			for (var i = min; i <= max; i++) {
+				pages.push(i);
+			}
+
+			return pages;
+		},
+		recordingsPerPage: {
+			get: function() {
+				return this.sharedData.recordingsPerPage;
+			},
+			set: function(recordingsPerPage) {
+				this.sharedData.recordingsPerPage = recordingsPerPage;
+			}
+		}
 	},
 	watch: {
-		shown: function() {
-			this.resetRecordings();
-		},
-		recordedSinceGetRecordings: function() {
-			this.resetRecordings();
-		},
 		activePageNumber: function() {
-			this.getRecordings();
+			this.getRecordings(this.activePageNumber);
 		},
-		recordsPerPage: function() {
-			if (this.recordsPerPage < 10) this.recordsPerPage = 10;
-			else this.getRecordings();
+		recordingsPerPage: function(newVal, oldVal) {
+			if (this.recordingsPerPage < 10) this.recordingsPerPage = 10;
+			else {
+				// Store page number that will be used after the recordings have been retrieved.
+				// Currently, it makes sure that the first recording on the current page remains visible.
+				let i = ((this.activePageNumber - 1) * oldVal) + 1; // Index of first recording on active page, using 1-based indexing.
+				let pageNumberAfterGetRecordings = Math.ceil(i / this.recordingsPerPage); // Page number that will have recording i on the page.
+				this.getRecordings(pageNumberAfterGetRecordings);
+			}
+		},
+		pageNumberAfterGetRecordings: function() {
+			this.activePageNumber = this.pageNumberAfterGetRecordings;
 		}
 	},
 	methods: {
 		resetRecordings: function() {
 			this.setAudioRecording();
-			if (!this.shown || !this.recordedSinceGetRecordings) return;
 			this.activePageNumber = 1;
-			this.recordsPerPage = 10;
-			this.getRecordings();
+			this.recordingsPerPage = 10;
+			this.getRecordings(this.activePageNumber);
 		},
-		getRecordings: function() {
+		getRecordings: function(pageNumberAfterGetRecordings) {
 			this.$emit('get-recordings', {
 				page: this.activePageNumber,
-				recordsPerPage: this.recordsPerPage
+				pageNumberAfterGetRecordings: pageNumberAfterGetRecordings,
 			});
 		},
 		setAudioRecording: function(recording) {
