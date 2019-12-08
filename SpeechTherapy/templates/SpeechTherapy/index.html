@@ -9,6 +9,7 @@
 	<script src="{% static 'SpeechTherapy/js/reports.js' %}"></script>
 	<script src="{% static 'SpeechTherapy/js/profileForm.js' %}"></script>
 	<script src="{% static 'SpeechTherapy/js/adminForm.js' %}"></script>
+	<script src='{% static "SpeechTherapy/js/textSearch.js" %}'></script>
 	<script src='{% static "SpeechTherapy/js/newRecording.js" %}'></script>
 	<script src='{% static "SpeechTherapy/js/newRecordingResult.js" %}'></script>
 	<script src='{% static "SpeechTherapy/js/recording.js" %}'></script>
@@ -26,6 +27,7 @@
 	<script src='{% static "SpeechTherapy/js/NewRecordingInterpreter.js" %}'></script>
 	<script src='{% static "SpeechTherapy/js/RecordingUploader.js" %}'></script>
 	<script src='{% static "SpeechTherapy/js/NewTextSamplesGetter.js" %}'></script>
+	<script src='{% static "SpeechTherapy/js/TextSamplesSearcher.js" %}'></script>
 	<script src='{% static "SpeechTherapy/js/RecordingsGetter.js" %}'></script>
 	<script src='{% static "SpeechTherapy/js/TextSamplesImporter.js" %}'></script>
 
@@ -52,11 +54,14 @@
 					@get-new-text-samples='getNewTextSamples'
 					@recording-begun='recordingBegun'
 					@new-recording='handleNewRecording'
+					@search-text-samples='searchTextSamples'
+					@add-text-samples='addTextSamples'
 					:active='activeTab == "newRecording"'
 					:getting-text-samples='gettingTextSamples'
 					:processing='processingNewRecording'
 					:text-samples='textSamples'
-					:results='newRecordingResults'></new-recording>
+					:results='newRecordingResults'
+					:searched-text-samples='searchedTextSamples'></new-recording>
 				<recordings
 					v-show='activeTab == "resultsHistory"'
 					@get-recordings='getRecordings'
@@ -126,7 +131,7 @@
 		computed: {
 			signedIn: function() { return this.user.id; },
 			hasRecordings: function() { return this.recordingCount > 0; },
-			processingNewRecording: function() { return this.interpretingRecording || this.uploadingNewRecording; },
+			processingNewRecording: function() { return this.recordingsInterpreted < this.newRecordingResults.length || this.recordingsScored < this.newRecordingResults.length; },
 			resultsHistoryClass: function() {
 				let resultsHistoryClass = this.headerClass("resultsHistory");
 				resultsHistoryClass.disabled = !this.hasRecordings;
@@ -165,13 +170,13 @@
 					url: '{% url "updateUser" %}',
 					onSuccess: (response) => this.onUpdateUserSuccess(response),
 					onError: (response, status) => this.addError(response),
-					onComplete: () => this.updatingUser = false
+					onComplete: (response) => this.onUpdateUserComplete(response)
 				}));
 				this.addXHR('recordingUploader', new RecordingUploader({
 					url: '{% url "newRecording" %}',
 					onSuccess: (response) => this.onNewRecordingSuccess(response),
 					onError: (response, status) => this.addError(response),
-					onComplete: () => this.uploadingNewRecording = false
+					onComplete: () => this.recordingsScored++
 				}));
 				this.addXHR('newTextSamplesGetter', new NewTextSamplesGetter({
 					url: '{% url "getTextSamples" %}',
@@ -191,18 +196,31 @@
 					onError: (response, status) => this.addError(response),
 					onComplete: () => this.importingTextSamples = false
 				}));
+				this.addXHR('textSamplesSearcher', new TextSamplesSearcher({
+					url: '{% url "searchTextSamples" %}',
+					onSuccess: (response) => this.onTextSamplesSearchSuccess(response),
+					onError: (response, status) => this.addError(response),
+					onComplete: () => this.searchingTextSamples = false
+				}));
 			},
 			initNewRecordingInterpreter: function() {
 				this.newRecordingInterpreter = new NewRecordingInterpreter('{% url "demoSpeechAnalyzer" %}', {
 					onSuccess: (newRecordingResultsIndex, data) => this.handleRecordingInterpretation(newRecordingResultsIndex, data),
 					onError: (newRecordingResultsIndex, response, status) => this.addError(newRecordingResultsIndex, response),
-					onComplete: (newRecordingResultsIndex, response) => this.interpretingRecording = false
+					onComplete: (newRecordingResultsIndex, response) => this.recordingsInterpreted++
 				});
-				this.newRecordingInterpreter.names.forEach(name => this.newRecordingResults.push({
-					name: name,
-					interpretation: '',
-					score: -1
-				}));
+				this.newRecordingResults = this.newRecordingInterpreter.names.map(name => {
+					return {
+						name: name,
+						interpretation: '',
+						score: -1
+					};
+				});
+				// Set this.recordingsInterpreted and this.recordingsScored equal to
+				// this.newRecordingResults.length so that it doesn't think that results are
+				// being processed. Otherwise, the user would never be able to make a recording.
+				this.recordingsInterpreted = this.newRecordingResults.length;
+				this.recordingsScored = this.newRecordingResults.length;
 			},
 			headerClass: function(tab) {
 				return {
@@ -254,8 +272,11 @@
 				this.xhrs.recordingsGetter.submit(data.page, this.sharedRecordingsData.recordingsPerPage, data.pageNumberAfterGetRecordings, this.lastGetRecordingsTs);
 			},
 			updateUser: function(attr) {
-				this.updatingUser = true;
-				this.xhrs.profileUpdater.submit(attr, this.user[attr]);
+				if (this.updatingUser) this.pendingUserUpdates.push(attr);
+				else {
+					this.updatingUser = true;
+					this.xhrs.profileUpdater.submit(attr, this.user[attr]);
+				}
 			},
 			importTextSamples: function(file) {
 				this.importingTextSamples = true;
@@ -269,7 +290,8 @@
 				});
 			},
 			handleNewRecording: function(data) {
-				this.interpretingRecording = true;
+				this.recordingsInterpreted = 0;
+				this.recordingsScored = 0;
 				this.updateTs('newRecordingTs');
 				this.newRecordingResults.forEach(result => {
 					result.interpretation = '';
@@ -285,9 +307,15 @@
 				this.newRecordingResults[i].interpretation = data.interpretation;
 			},
 			saveNewRecording: function(i, data) {
-				this.uploadingNewRecording = true;
 				this.updateTs('lastGetRecordingsTs');
 				this.xhrs.recordingUploader.submit(i, this.sharedRecordingsData.recordingsPerPage, this.lastGetRecordingsTs, data);
+			},
+			searchTextSamples: function(text) {
+				this.updateTs('lastTextSampleSearchTs');
+				this.textSamplesSearcher.submit(text, this.lastTextSampleSearchTs);
+			},
+			addTextSamples: function(textSamples) {
+				this.textSamples = this.textSamples.concat(textSamples);
 			},
 			addXHR: function(key, xhr) {
 				this.xhrs[key] = xhr;
@@ -330,6 +358,11 @@
 			onUpdateUserSuccess: function(response) {
 				this.updateCSRFToken(response.csrfToken);
 			},
+			onUpdateUserComplete: function(response) {
+				// Set this.updateUser to false before calling updateUser so that the update request will get sent.
+				this.updatingUser = false;
+				if (this.pendingUserUpdates.length > 0) this.updateUser(this.pendingUserUpdates.shift());
+			},
 			onNewRecordingSuccess: function(response) {
 				this.newRecordingResults[response.newRecordingResultsIndex].score = response.recording.score;
 
@@ -343,6 +376,12 @@
 				if (response.ts < this.lastGetTextSamplesTs) return;
 				this.lastGetTextSamplesTs = response.ts;
 				this.textSamples = response.textSamples;
+			},
+			onTextSampleSearchSuccess: function(response) {
+				// Don't accept text samples from a request that was made before the most recent request.
+				if (response.ts < this.lastTextSampleSearchTs) return;
+				this.lastTextSampleSearchTs = response.ts;
+				this.searchedTextSamples = response.textSamples;
 			},
 			onGetRecordingSuccess: function(response) {
 				// Don't accept recordings from a request that was made before the most recent request.

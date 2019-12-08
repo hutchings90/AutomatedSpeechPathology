@@ -66,17 +66,21 @@ def index(request):
 			'signingIn': False,
 			'signingUp': False,
 			'signingOut': False,
-			'updatingProfile': False,
+			'updatingUser': False,
+			'pendingUserUpdates': [],
 			'gettingTextSamples': False,
 			'lastGetTextSamplesTs': None,
+			'searchedTextSamples': [],
+			'textSampleSearchTs': None,
+			'searchingTextSamples': False,
 			'pageNumberAfterGetRecordings': 1,
 			'sharedRecordingsData': {
 				'recordingsPerPage': 10
 			},
 			'lastGetRecordingsTs': None,
-			'interpretingRecording': False,
+			'recordingsInterpreted': 0,
+			'recordingsScored': 0,
 			'newRecordingTs': None,
-			'uploadingNewRecording': False,
 			'importingTextSamples': False,
 			'interpretation': '',
 			'score': -1,
@@ -151,10 +155,7 @@ def sendSignInHelpEmail(request):
 	except User.DoesNotExist as e:
 		return HttpResponseNotFound('User not found.')
 
-	if sentEmailCount < 1:
-		return HttpResponseNotFound('Email not sent. Please contact an administrator.')
-
-	user.email_user('Automated Speech Therapy Sign In Help',
+	sentEmailCount = user.email_user('Automated Speech Therapy Sign In Help',
 		'Here is the message',
 		fail_silently=False
 	)
@@ -265,13 +266,19 @@ def importTextSamples(request):
 	numCreated = endCount - startCount
 
 	return HttpResponse(json.dumps({
-		'numCreated': numCreated
+		'numCreated': numCreated,
+		'textSamples': getTextSampleData()
 	}))
+
+def searchTextSamples(request):
+	textSamples = []
+
+	return HttpResponse(json.dumps(textSamples))
 
 def demoSpeechAnalyzer(request):
 	return HttpResponse(random.choice([
 		# First ten Harvard Sentences
-		'Glue the sheet to the dark blue background.'
+		'Glue the sheet to the dark blue background.',
 		'It\'s easy to tell the depth of a well.',
 		'These days a chicken leg is a rare dish.',
 		'Rice is often served in round bowls.',

@@ -3,7 +3,7 @@ Vue.component('admin-form', {
 	template: `<div>
 		<form>
 			<div>
-				<label>Text Samples</label>
+				<label>Text Samples<span v-show='importingTextSamples'> (Importing...)</span></label>
 				<br>
 				<input :disabled='importingTextSamples' @change='importTextSamples($event)' type='file' accept='application/zip'/>
 			</div>

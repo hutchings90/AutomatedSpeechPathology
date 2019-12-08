@@ -49,7 +49,7 @@ Vue.component('recordings', {
 		};
 	},
 	computed: {
-		pageCount: function() { return Math.ceil(this.recordingCount / this.recordingsPerPage); },
+		pageCount: function() { return Math.floor(this.recordingCount / this.recordingsPerPage); },
 		displayedPages: function() {
 			let min = Math.max(1, this.activePageNumber - 3);
 			let max = Math.min(this.pageCount, min + 6);
@@ -82,7 +82,7 @@ Vue.component('recordings', {
 				// Store page number that will be used after the recordings have been retrieved.
 				// Currently, it makes sure that the first recording on the current page remains visible.
 				let i = ((this.activePageNumber - 1) * oldVal) + 1; // Index of first recording on active page, using 1-based indexing.
-				let pageNumberAfterGetRecordings = Math.ceil(i / this.recordingsPerPage); // Page number that will have recording i on the page.
+				let pageNumberAfterGetRecordings = Math.floor(i / this.recordingsPerPage); // Page number that will have recording i on the page.
 				this.getRecordings(pageNumberAfterGetRecordings);
 			}
 		},

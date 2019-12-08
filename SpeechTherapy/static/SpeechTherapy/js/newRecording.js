@@ -3,7 +3,7 @@
  * Recording and WAV encoding based on Matt Diamond's work at https://github.com/mattdiamond/Recorderjs.
  */
 Vue.component('new-recording', {
-	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples', 'results' ],
+	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples', 'results', 'searchedTextSamples' ],
 	template: `<div>
 		<div v-if='!gettingStream && failedToGetUserMedia'>Audio cannot be recorded. Could not access recording device.</div>
 		<div v-show='!gettingStream && !failedToGetUserMedia'>
@@ -11,11 +11,18 @@ Vue.component('new-recording', {
 				<canvas ref='analyser' width='1024' height='500'></canvas>
 			</div>
 			<div v-if='textSamples.length < 1'>No text samples were found.</div>
+			<text-search
+				v-if='showTextSearch'
+				@search='searchTextSamples'
+				@select-text-samples='selectTextSamples'
+				@close='endTextSampleSearch'
+				:text-samples='searchedTextSamples'></text-search>
 			<div v-else>
 				<div class='new-recording-prompt'>
 					<div>
 						<button @click='prevTextSample' :disabled='disableTextSampleControls'><</button>
-						<button @click='getNewTextSamples' :disabled='disableTextSampleControls'>New Phrases</button>
+						<button @click='getNewTextSamples' :disabled='disableTextSampleControls'>Next Set</button>
+						<button @click='startTextSampleSearch' :disabled='disableTextSampleControls'>Search Phrases</button>
 						<button @click='nextTextSample' :disabled='disableTextSampleControls'>></button>
 						<p v-html='activeTextSample.text'></p>
 					</div>
@@ -52,6 +59,7 @@ Vue.component('new-recording', {
 			listening: false,
 			audioSrc: '',
 			activeTextSampleIndex: -1,
+			showTextSearch: false,
 			// For recording audio
 			audioContext: null,
 			analyserContext: null,
@@ -126,6 +134,22 @@ Vue.component('new-recording', {
 			if (this.listening) return;
 			this.textSamplesGotten = false;
 			this.$emit('get-new-text-samples');
+		},
+		startTextSampleSearch: function() {
+			this.showTextSearch = true;
+		},
+		endTextSampleSearch: function() {
+			this.showTextSearch = false;
+		},
+		searchTextSamples: function(text) {
+			this.$emit('search-text-samples', text);
+		},
+		selectTextSamples: function(textSamples) {
+			let newTextSamples = textSamples.filter(textSample => !this.keyedTextSamples[textSamples.id]);
+			if (newTextSamples.length > 0) {
+				this.$emit('add-text-samples', newTextSamples);
+				this.activeTextSampleIndex = this.textSamples.length - newTextSamples.length;
+			}
 		},
 		endRecording: function() {
 			clearTimeout(this.timeout);
