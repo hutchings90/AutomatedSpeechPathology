@@ -20,7 +20,7 @@ class Recording(models.Model):
 
 	def data(self):
 		return {
-			'date_recorded': int(self.date_recorded.timestamp() * 1000),
+			'date_recorded': self.date_recorded * 1000,
 			'text': self.text_sample.text,
 			'name': self.text_sample.name,
 			'audioSrc': self.audio.url,

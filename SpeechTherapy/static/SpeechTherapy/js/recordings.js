@@ -2,8 +2,6 @@ Vue.component('recordings', {
 	props: [ 'recordings', 'recordingCount', 'sharedData' ],
 	template: `<div>
 		<div>
-			<button v-if='activePageNumber > 4'><<</button>
-			<button v-if='activePageNumber > 5'><</button>
 			<label class='page-marker'
 				v-for='pageNumber in displayedPages'
 				:class='{"active": pageNumber == activePageNumber }'
@@ -11,8 +9,6 @@ Vue.component('recordings', {
 				<input v-model.number='activePageNumber' :value='pageNumber' type='radio' class='button'/>
 				<span v-html='pageNumber'></span>
 			</label>
-			<button v-if='activePageNumber < pageCount - 4'>></button>
-			<button v-if='activePageNumber < pageCount - 5'>>></button>
 			<div class='total-page-report'><span v-html='pageCount'></span> Pages</div>
 			<div class='recordings-page-input-container'>
 				<span>
