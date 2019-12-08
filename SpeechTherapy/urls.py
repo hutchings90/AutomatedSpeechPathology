@@ -13,5 +13,6 @@ urlpatterns = [
 	path('getRecordings', views.getRecordings, name='getRecordings'),
 	path('newRecording', views.newRecording, name='newRecording'),
 	path('importTextSamples', views.importTextSamples, name='importTextSamples'),
+	path('searchTextSamples', views.searchTextSamples, name='searchTextSamples'),
 	path('demoSpeechAnalyzer', views.demoSpeechAnalyzer, name='demoSpeechAnalyzer'),
 ]

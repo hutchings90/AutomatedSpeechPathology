@@ -1,4 +1,4 @@
-class TextSamplesSearcher extends SpeechTherapyRequest {
+class TextSamplesSearcher extends SpeechTherapyRequester {
 	submit(text, ts) {
 		let data = new FormData();
 		data.append('text', text);

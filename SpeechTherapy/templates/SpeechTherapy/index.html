@@ -56,12 +56,14 @@
 					@new-recording='handleNewRecording'
 					@search-text-samples='searchTextSamples'
 					@add-text-samples='addTextSamples'
+					@end-text-samples-search='endTextSamplesSearch'
 					:active='activeTab == "newRecording"'
 					:getting-text-samples='gettingTextSamples'
 					:processing='processingNewRecording'
 					:text-samples='textSamples'
 					:results='newRecordingResults'
-					:searched-text-samples='searchedTextSamples'></new-recording>
+					:searched-text-samples='searchedTextSamples'
+					:searching-text-samples='searchingTextSamples'></new-recording>
 				<recordings
 					v-show='activeTab == "resultsHistory"'
 					@get-recordings='getRecordings'
@@ -136,6 +138,12 @@
 				let resultsHistoryClass = this.headerClass("resultsHistory");
 				resultsHistoryClass.disabled = !this.hasRecordings;
 				return resultsHistoryClass;
+			},
+			keyedTextSamples: function() {
+				return this.textSamples.reduce((textSamples, textSample) => {
+					textSamples[textSample.id] = textSample;
+					return textSamples;
+				}, {});
 			},
 			maxTextSampleId: function() { return Math.max(...this.textSamples.map(textSample => textSample.id)); }
 		},
@@ -312,10 +320,15 @@
 			},
 			searchTextSamples: function(text) {
 				this.updateTs('lastTextSampleSearchTs');
-				this.textSamplesSearcher.submit(text, this.lastTextSampleSearchTs);
+				this.searchedTextSamples = [];
+				this.xhrs.textSamplesSearcher.submit(text, this.lastTextSampleSearchTs);
 			},
 			addTextSamples: function(textSamples) {
-				this.textSamples = this.textSamples.concat(textSamples);
+				let newTextSamples = textSamples.filter(textSample => !this.keyedTextSamples[textSamples.id]);
+				this.textSamples = this.textSamples.concat(newTextSamples).reverse().slice(0, 30).reverse();
+			},
+			endTextSamplesSearch: function() {
+				this.searchedTextSamples = [];
 			},
 			addXHR: function(key, xhr) {
 				this.xhrs[key] = xhr;
@@ -377,7 +390,7 @@
 				this.lastGetTextSamplesTs = response.ts;
 				this.textSamples = response.textSamples;
 			},
-			onTextSampleSearchSuccess: function(response) {
+			onTextSamplesSearchSuccess: function(response) {
 				// Don't accept text samples from a request that was made before the most recent request.
 				if (response.ts < this.lastTextSampleSearchTs) return;
 				this.lastTextSampleSearchTs = response.ts;

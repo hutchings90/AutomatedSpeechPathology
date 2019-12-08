@@ -3,7 +3,7 @@
  * Recording and WAV encoding based on Matt Diamond's work at https://github.com/mattdiamond/Recorderjs.
  */
 Vue.component('new-recording', {
-	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples', 'results', 'searchedTextSamples' ],
+	props: [ 'active', 'gettingTextSamples', 'processing', 'textSamples', 'results', 'searchedTextSamples', 'searchingTextSamples' ],
 	template: `<div>
 		<div v-if='!gettingStream && failedToGetUserMedia'>Audio cannot be recorded. Could not access recording device.</div>
 		<div v-show='!gettingStream && !failedToGetUserMedia'>
@@ -15,8 +15,9 @@ Vue.component('new-recording', {
 				v-if='showTextSearch'
 				@search='searchTextSamples'
 				@select-text-samples='selectTextSamples'
-				@close='endTextSampleSearch'
-				:text-samples='searchedTextSamples'></text-search>
+				@close='endTextSamplesSearch'
+				:text-samples='searchedTextSamples'
+				:searching='searchingTextSamples'></text-search>
 			<div v-else>
 				<div class='new-recording-prompt'>
 					<div>
@@ -30,7 +31,7 @@ Vue.component('new-recording', {
 					<button @click='endRecording' v-show='listening' :disabled='disableRecordingControls'>Stop</button>
 				</div>
 				<div>
-					<label>
+					<label class='input'>
 						<input v-model='autoPlay' type='checkbox'/>Autoplay audio
 					</label>
 				</div>
@@ -138,18 +139,15 @@ Vue.component('new-recording', {
 		startTextSampleSearch: function() {
 			this.showTextSearch = true;
 		},
-		endTextSampleSearch: function() {
+		endTextSamplesSearch: function() {
 			this.showTextSearch = false;
+			this.$emit('end-text-samples-search');
 		},
 		searchTextSamples: function(text) {
 			this.$emit('search-text-samples', text);
 		},
 		selectTextSamples: function(textSamples) {
-			let newTextSamples = textSamples.filter(textSample => !this.keyedTextSamples[textSamples.id]);
-			if (newTextSamples.length > 0) {
-				this.$emit('add-text-samples', newTextSamples);
-				this.activeTextSampleIndex = this.textSamples.length - newTextSamples.length;
-			}
+			this.$emit('add-text-samples', textSamples);
 		},
 		endRecording: function() {
 			clearTimeout(this.timeout);

@@ -2,7 +2,7 @@ Vue.component('recording', {
 	props: [ 'recording', 'audioRecording' ],
 	template: `<tr>
 		<td class='audio-controls'>
-			<label>
+			<label class='input'>
 				<span v-html='playHTML'></span>
 				<input v-model='shouldPlay' type='checkbox' class='button'/>
 			</label>

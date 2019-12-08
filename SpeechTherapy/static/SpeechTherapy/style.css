@@ -201,7 +201,6 @@
 	width: 50px;
 }
 
-
 .text-search{
 	width: 450px;
 	background: white;
@@ -225,7 +224,6 @@
 	float: right;
 	font-family: sans-serif;
 	font-weight: normal;
-	cursor: pointer;
 }
 
 .text-search .content .body {
@@ -238,6 +236,10 @@
 	text-align: right;
 	border-top: 1px solid black;
 	padding: 10px;
+}
+
+.input, button, input[type='checkbox'], input[type='file'] {
+	cursor: pointer;
 }
 
 body {
