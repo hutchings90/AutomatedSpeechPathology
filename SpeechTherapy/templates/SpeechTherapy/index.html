@@ -395,7 +395,7 @@
 
 				// Don't accept recordings from a request that was made before the most recent request.
 				if (response.ts < this.lastGetTextSamplesTs) return;
-				this.textSamples = response.textSamples;
+				if (this.textSamples.length < 1) this.textSamples = response.textSamples;
 			},
 			reportDone: function(error) {
 				this.reports.splice(this.reports.indexOf(error), 1);
