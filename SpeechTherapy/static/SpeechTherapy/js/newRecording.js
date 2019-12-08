@@ -51,7 +51,7 @@ Vue.component('new-recording', {
 			hasRecorded: false,
 			listening: false,
 			audioSrc: '',
-			activeTextSampleIndex: 0,
+			activeTextSampleIndex: -1,
 			// For recording audio
 			audioContext: null,
 			analyserContext: null,
@@ -81,20 +81,7 @@ Vue.component('new-recording', {
 		barWidth: function() { return Math.floor(this.spacing / 2); },
 		frequencyBinCount: function() { return Math.min(this.analyserNode.frequencyBinCount, 512); },
 		multiplier: function() { return this.frequencyBinCount / this.numBars; },
-		activeTextSample: function() {
-			if (this.textSamples.length < 1) {
-				let textSample = {
-					id: null,
-					text: ''
-				};
-				if (!this.gettingTextSamples && !this.textSamplesGotten) {
-					textSample.text += ' Searching for new text samples...';
-					this.getNewTextSamples();
-				}
-				return textSample;
-			}
-			return this.textSamples[this.activeTextSampleIndex];
-		}
+		activeTextSample: function() { return this.activeTextSampleIndex < 0 ? {} : this.textSamples[this.activeTextSampleIndex]; }
 	},
 	watch: {
 		active: function() {
@@ -103,6 +90,7 @@ Vue.component('new-recording', {
 		},
 		textSamples: function(newVal, oldVal) {
 			this.textSamplesGotten = true;
+			this.activeTextSampleIndex = 0;
 		}
 	},
 	methods: {
