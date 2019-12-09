@@ -175,13 +175,19 @@
 	padding: 5 5px;
 }
 
+.recordings-table tbody tr td pre {
+	max-width: 350px;
+	text-align: left;
+	white-space: pre-wrap;
+	margin: 0;
+}
+
 .recordings-table tbody tr td.audio-controls {
 	text-align: center;
 	width: 30px;
 }
 
 .recordings-table tbody tr td.text-sample-cell {
-	text-align: left;
 	padding-right: 10px;
 }
 
@@ -209,12 +215,6 @@
 	border-radius: 5px;
 }
 
-.text-search .backdrop {
-}
-
-.text-search .content {
-}
-
 .text-search .content .header {
 	border-bottom: 1px solid black;
 	padding: 0 10px;
@@ -238,7 +238,7 @@
 	padding: 10px;
 }
 
-.input, button, input[type='checkbox'], input[type='file'] {
+.input, button:not(:disabled), input[type='checkbox'], input[type='file'] {
 	cursor: pointer;
 }
 

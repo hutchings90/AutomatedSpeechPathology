@@ -1,5 +1,5 @@
 Vue.component('recordings', {
-	props: [ 'recordings', 'recordingCount', 'sharedData' ],
+	props: [ 'recordings', 'recordingCount', 'sharedData', 'pageNumberAfterGetRecordings' ],
 	template: `<div>
 		<div>
 			<label class='page-marker'
@@ -9,7 +9,7 @@ Vue.component('recordings', {
 				<input v-model.number='activePageNumber' :value='pageNumber' type='radio' class='button'/>
 				<span v-html='pageNumber'></span>
 			</label>
-			<div class='total-page-report'><span v-html='pageCount'></span> Pages</div>
+			<div class='total-page-report'><span v-html='pageCount'></span> Page<span v-show='pageCount > 1'>s</span></div>
 			<div class='recordings-page-input-container'>
 				<span>
 					<label>Current page:</label>
@@ -49,7 +49,7 @@ Vue.component('recordings', {
 		};
 	},
 	computed: {
-		pageCount: function() { return Math.floor(this.recordingCount / this.recordingsPerPage); },
+		pageCount: function() { return Math.ceil(this.recordingCount / this.recordingsPerPage); },
 		displayedPages: function() {
 			let min = Math.max(1, this.activePageNumber - 3);
 			let max = Math.min(this.pageCount, min + 6);
@@ -64,27 +64,26 @@ Vue.component('recordings', {
 			return pages;
 		},
 		recordingsPerPage: {
-			get: function() {
-				return this.sharedData.recordingsPerPage;
-			},
+			get: function() { return this.sharedData.recordingsPerPage; },
 			set: function(recordingsPerPage) {
+				let oldVal = this.recordingsPerPage;
 				this.sharedData.recordingsPerPage = recordingsPerPage;
+				if (this.recordingsPerPage < 10) this.recordingsPerPage = 10;
+				else {
+					// Store page number that will be used after the recordings have been retrieved.
+					// Currently, it makes sure that the first recording on the current page remains visible.
+					let i = ((this.activePageNumber - 1) * oldVal) + 1; // Index of first recording on active page, using 1-based indexing.
+					let pageNumberAfterGetRecordings = Math.ceil(i / this.recordingsPerPage); // Page number that will have recording i on the page.
+					this.getRecordings(pageNumberAfterGetRecordings);
+				}
 			}
 		}
 	},
 	watch: {
 		activePageNumber: function() {
-			this.getRecordings(this.activePageNumber);
-		},
-		recordingsPerPage: function(newVal, oldVal) {
-			if (this.recordingsPerPage < 10) this.recordingsPerPage = 10;
-			else {
-				// Store page number that will be used after the recordings have been retrieved.
-				// Currently, it makes sure that the first recording on the current page remains visible.
-				let i = ((this.activePageNumber - 1) * oldVal) + 1; // Index of first recording on active page, using 1-based indexing.
-				let pageNumberAfterGetRecordings = Math.floor(i / this.recordingsPerPage); // Page number that will have recording i on the page.
-				this.getRecordings(pageNumberAfterGetRecordings);
-			}
+			if (this.activePageNumber > this.pageCount) this.activePageNumber = this.pageCount;
+			else if (this.activePageNumber < 1) this.activePageNumber = 1;
+			else this.getRecordings(this.activePageNumber);
 		},
 		pageNumberAfterGetRecordings: function() {
 			this.activePageNumber = this.pageNumberAfterGetRecordings;

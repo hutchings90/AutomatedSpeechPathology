@@ -3,18 +3,13 @@ Vue.component('text-search', {
 	template: `<div class='text-search'>
 		<div class='content'>
 			<div class='header'>
-				<h3>Search Phrases<button @click='close' class='close-button'>X</button></h3>
+				<h3>Search Phrases</h3>
 			</div>
 			<div class='body'>
 				<div>
-					Search: <input v-model='input' @input='handleInput' ref='search-input' type='text'/>
+					Search: <input v-model='input' @input='handleInput' ref='search-input' type='text'/><span v-show='searching'> Searching...</span>
 				</div>
 				<p v-html='report'></p>
-				<div v-show='hasTextSamples' class='input'>
-					<label class='input'>
-						<input v-model='selectAll' type='checkbox'/>Select All
-					</label>
-				</div>
 				<div v-for='textSample in textSamples' class='input'>
 					<label class='input'>
 						<input v-model='selectedTextSampleIds' :value='textSample.id' type='checkbox'/><span v-html='textSample.text'></span>
@@ -22,7 +17,8 @@ Vue.component('text-search', {
 				</div>
 			</div>
 			<div class='footer'>
-				<button v-show='hasTextSamples' @click='selectTextSamples'>Select</button>
+				<button v-show='hasTextSamples' v-html='toggleAllText' @click='toggleAll' class='left'></button>
+				<button :disabled='!hasSelections' @click='selectTextSamples'>Select</button>
 				<button @click='close'>Cancel</button>
 			</div>
 		</div>
@@ -33,14 +29,15 @@ Vue.component('text-search', {
 	data: function() {
 		return {
 			input: '',
-			textSampleIdsSelected: [],
-			allSelected: false
+			selectedTextSampleIds: []
 		};
 	},
 	computed: {
+		toggleAllText: function() { return (this.selectAll ? 'Unselect' : 'Select') + ' All'; },
 		searchInput: function() { return this.$refs['search-input']; },
 		isValidInput: function() { return this.input.length > 4; },
 		hasTextSamples: function() { return this.textSamples.length > 0; },
+		hasSelections: function() { return this.selectedTextSamples.length > 0; },
 		keyedTextSamples: function() {
 			return this.textSamples.reduce((textSamples, textSample) => {
 				textSamples[textSample.id] = textSample;
@@ -49,34 +46,15 @@ Vue.component('text-search', {
 		},
 		selectedTextSamples: function() { return this.selectedTextSampleIds.map(id => this.keyedTextSamples[id]); },
 		report: function() {
-			if (this.hasTextSamples) return '';
-			if (this.searching) return 'Searching...';
+			if (this.hasTextSamples || this.searching) return '';
 			if (this.isValidInput) return 'No matching phrases found.';
-			return 'Type at least 5 characters for results to appear.';
+			return 'Type at least 5 characters to search for phrases.';
 		},
 		textSampleIds: function() { return this.textSamples.map(textSample => textSample.id); },
 		selectAll: {
-			get: function() {
-				return this.allSelected;
-			},
-			set: function(allSelected) {
-				if (this.allSelected) {
-					this.selectedTextSampleIds = [];
-					this.allSelected = false;
-				}
-				else {
-					this.selectedTextSampleIds = this.textSampleIds;
-					this.allSelected = true;
-				}
-			}
-		},
-		selectedTextSampleIds: {
-			get: function() {
-				return this.textSampleIdsSelected;
-			},
-			set: function(textSampleIds) {
-				this.textSampleIdsSelected = textSampleIds;
-				this.allSelected = this.textSampleIdsSelected.length == this.textSampleIds.length;
+			get: function() { return this.selectedTextSampleIds.length == this.textSampleIds.length; },
+			set: function() {
+				this.selectedTextSampleIds = this.selectAll ? [] : this.textSampleIds;
 			}
 		}
 	},
@@ -91,6 +69,9 @@ Vue.component('text-search', {
 		selectTextSamples: function() {
 			this.$emit('select-text-samples', this.selectedTextSamples);
 			this.close();
+		},
+		toggleAll: function() {
+			this.selectAll = !this.selectAll;
 		}
 	}
 });

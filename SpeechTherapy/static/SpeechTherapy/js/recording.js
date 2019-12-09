@@ -13,9 +13,7 @@ Vue.component('recording', {
 			<div v-html='timeDisplay'></div>
 		</td>
 		<td class='text-sample-cell'>
-			<div>
-				<pre v-html='recording.text' class='sample-text'></pre>
-			</div>
+			<pre v-html='recording.text' class='sample-text'></pre>
 		</td>
 		<td>
 			<pre v-html='recording.interpretation'></pre>

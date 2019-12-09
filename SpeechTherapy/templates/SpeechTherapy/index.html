@@ -3,6 +3,7 @@
 	{% load static %}
 
 	<link rel="stylesheet" type="text/css" href="{% static 'SpeechTherapy/style.css' %}"/>
+	<link rel="shortcut icon" type="image/jpeg" href="{% static 'favicon.ico' %}">
 
 	<script src="{% static 'SpeechTherapy/js/vue.js' %}"></script>
 	<script src="{% static 'SpeechTherapy/js/report.js' %}"></script>
@@ -56,7 +57,6 @@
 					@new-recording='handleNewRecording'
 					@search-text-samples='searchTextSamples'
 					@add-text-samples='addTextSamples'
-					@end-text-samples-search='endTextSamplesSearch'
 					:active='activeTab == "newRecording"'
 					:getting-text-samples='gettingTextSamples'
 					:processing='processingNewRecording'
@@ -69,7 +69,8 @@
 					@get-recordings='getRecordings'
 					:recordings='recordings'
 					:recording-count='recordingCount'
-					:shared-data='sharedRecordingsData'></recordings>
+					:shared-data='sharedRecordingsData'
+					:page-number-after-get-recordings='pageNumberAfterGetRecordings'></recordings>
 				<profile-form
 					v-show='activeTab == "profile"'
 					@update-attr='updateUser'
@@ -319,16 +320,13 @@
 				this.xhrs.recordingUploader.submit(i, this.sharedRecordingsData.recordingsPerPage, this.lastGetRecordingsTs, data);
 			},
 			searchTextSamples: function(text) {
+				this.searchingTextSamples = true;
 				this.updateTs('lastTextSampleSearchTs');
-				this.searchedTextSamples = [];
 				this.xhrs.textSamplesSearcher.submit(text, this.lastTextSampleSearchTs);
 			},
 			addTextSamples: function(textSamples) {
 				let newTextSamples = textSamples.filter(textSample => !this.keyedTextSamples[textSamples.id]);
-				this.textSamples = this.textSamples.concat(newTextSamples).reverse().slice(0, 30).reverse();
-			},
-			endTextSamplesSearch: function() {
-				this.searchedTextSamples = [];
+				this.textSamples = newTextSamples.concat(this.textSamples).slice(0, 30);
 			},
 			addXHR: function(key, xhr) {
 				this.xhrs[key] = xhr;

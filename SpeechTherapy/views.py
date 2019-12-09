@@ -273,9 +273,11 @@ def importTextSamples(request):
 def searchTextSamples(request):
 	post = request.POST
 	text = post.get('text')
+	ts = post.get('ts')
 
 	return HttpResponse(json.dumps({
-		'textSamples': TextSample.objects.filter(text__contains=text).values()[:30:1]
+		'textSamples': TextSample.objects.filter(text__contains=text).values()[:30:1],
+		'ts': ts
 	}))
 
 def demoSpeechAnalyzer(request):

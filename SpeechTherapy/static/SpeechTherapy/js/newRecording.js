@@ -141,7 +141,6 @@ Vue.component('new-recording', {
 		},
 		endTextSamplesSearch: function() {
 			this.showTextSearch = false;
-			this.$emit('end-text-samples-search');
 		},
 		searchTextSamples: function(text) {
 			this.$emit('search-text-samples', text);
