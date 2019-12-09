@@ -12,7 +12,7 @@ Vue.component('new-recording', {
 			</div>
 			<div v-if='textSamples.length < 1'>No text samples were found.</div>
 			<text-search
-				v-if='showTextSearch'
+				v-else-if='showTextSearch'
 				@search='searchTextSamples'
 				@select-text-samples='selectTextSamples'
 				@close='endTextSamplesSearch'
@@ -48,7 +48,7 @@ Vue.component('new-recording', {
 	</div>`,
 	mounted: function() {
 		this.initMediaDevices();
-		this.nextTextSample();
+		if (this.textSamples.length > 0) this.nextTextSample();
 	},
 	data: function() {
 		return {
