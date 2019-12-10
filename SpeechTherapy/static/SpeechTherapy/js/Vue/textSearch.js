@@ -58,6 +58,11 @@ Vue.component('text-search', {
 			}
 		}
 	},
+	watch: {
+		textSamples: function() {
+			this.selectedTextSampleIds = this.selectedTextSampleIds.filter(id => this.keyedTextSamples[id]);
+		}
+	},
 	methods: {
 		handleInput: function() {
 			if (this.isValidInput) this.$emit('search', this.input);
