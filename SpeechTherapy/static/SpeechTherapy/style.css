@@ -3,6 +3,7 @@
 }
 
 #banner {
+	margin:10px;
 	margin-bottom: 20px;
 }
 
@@ -243,7 +244,7 @@
 }
 
 body {
-	margin: 10px;
+	margin: 0;
 }
 
 form {
