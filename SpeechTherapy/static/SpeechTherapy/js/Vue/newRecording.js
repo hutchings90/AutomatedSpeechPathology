@@ -10,7 +10,7 @@ Vue.component('new-recording', {
 			<div>
 				<canvas ref='analyser' width='1024' height='500'></canvas>
 			</div>
-			<div v-if='textSamples.length < 1'>No text samples were found.</div>
+			<div v-if='textSamples.length < 1'>No phrases were found.</div>
 			<text-search
 				v-else-if='showTextSearch'
 				@search='searchTextSamples'
