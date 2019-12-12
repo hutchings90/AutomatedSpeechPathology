@@ -1,6 +1,5 @@
-class SpeechToText {
-	constructor(name, handlers, usesOwnServer) {
-		this.usesOwnServer = usesOwnServer;
+class SpeechAnalyzer {
+	constructor(name, handlers) {
 		Object.assign(this, handlers);
 		this.data = null;
 		this.name = name;
@@ -32,9 +31,9 @@ class SpeechToText {
 	}
 
 	/**
-	 * All classes that inherit from this class and have usesOwnServer
-	 * set to true should implement this method in order to maintain
-	 * access to the server.
+	 * All classes that inherit from this class and use this project's
+	 * Django server should implement this method in order to maintain
+	 * access to the server when the CSRF token changes.
 	 */
 	updateCSRFToken(csrfToken) {}
 }

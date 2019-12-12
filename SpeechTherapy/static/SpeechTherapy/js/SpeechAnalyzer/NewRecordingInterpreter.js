@@ -1,6 +1,7 @@
 class NewRecordingInterpreter {
 	constructor(demoUrl, handlers) {
-		this.demoSpeechAnalyzerCount = 5;
+		this.demoXHRSpeechAnalyzerCount = 1; // Number of DemoSpeechAnalyzer instances to put into this.speechAnalyzers.
+		this.demoFrontEndSpeechAnalyzerCount = 1; // Number of DemoSpeechAnalyzer instances to put into this.speechAnalyzers.
 		this.demoUrl = demoUrl;
 		this.handlers = handlers;
 		this.initSpeechAnalyzers();
@@ -10,13 +11,17 @@ class NewRecordingInterpreter {
 		this.speechAnalyzers = [];
 
 		// Make DemoSpeechAnalyzers (see SpeechTherapy\static\SpeechTherapy\js\DemoSpeechAnalyzer.js).
-		for (var i = 0; i < this.demoSpeechAnalyzerCount; i++) {
-			this.addSpeechAnalyzer(new DemoSpeechAnalyzer(this.demoUrl, this.handlers));
+		for (var i = 0; i < this.demoXHRSpeechAnalyzerCount; i++) {
+			this.addSpeechAnalyzer(new DemoXHRSpeechAnalyzer(this.demoUrl, this.handlers));
+		}
+
+		for (var i = 0; i < this.demoFrontEndSpeechAnalyzerCount; i++) {
+			this.addSpeechAnalyzer(new DemoFrontEndSpeechAnalyzer(this.handlers));
 		}
 
 		// TODO: Add speech-to-text services that have been built here.
 		// Example for MicrosoftCognitiveServices.
-		// this.addSpeechAnalyzer(new MicrosoftCognitiveServices(subscriptionKey, tokenUrl, speechToTextUrl, handlers));
+		// this.addSpeechAnalyzer(new MicrosoftCognitiveServices(subscriptionKey, tokenUrl, speechAnalyzerUrl, handlers));
 	}
 
 	addSpeechAnalyzer(speechAnalyzer) {
