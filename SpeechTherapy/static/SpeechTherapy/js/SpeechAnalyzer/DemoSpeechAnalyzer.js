@@ -43,20 +43,16 @@ class DemoFrontEndSpeechAnalyzer extends SpeechAnalyzer {
 class DemoXHRSpeechAnalyzer extends SpeechAnalyzer {
 	constructor(url, handlers) {
 		super('Demo XHR Speech Analyzer', handlers);
-		this.xhr = new SpeechTherapyRequester({
+		this.addSpeechTherapyRequester('main', new SpeechTherapyRequester({
 			url: url,
 			onSuccess: (response) => this._onSuccess(response),
 			onError: (response, status) => this._onError(response, status),
 			onComplete: (response) => this._onComplete(response)
-		});
+		}));
 	}
 
 	submit(data) {
 		super.submit(data);
-		this.xhr.submit();
-	}
-
-	updateCSRFToken(csrfToken) {
-		this.xhr.updateCSRFToken(csrfToken);
+		this.speechTherapyRequesters.main.submit();
 	}
 }

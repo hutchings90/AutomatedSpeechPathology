@@ -4,6 +4,7 @@ class SpeechAnalyzer {
 		this.data = null;
 		this.name = name;
 		this.index = -1;
+		this.speechTherapyRequesters = {};
 	}
 
 	onSuccess(response) {}
@@ -30,10 +31,13 @@ class SpeechAnalyzer {
 		this.data = data;
 	}
 
-	/**
-	 * All classes that inherit from this class and use this project's
-	 * Django server should implement this method in order to maintain
-	 * access to the server when the CSRF token changes.
-	 */
-	updateCSRFToken(csrfToken) {}
+	addSpeechTherapyRequester(name, speechTherapyRequester) {
+		this.speechTherapyRequesters[name] = speechTherapyRequester;
+	}
+
+	updateCSRFToken(csrfToken) {
+		for (let key in this.speechTherapyRequesters) {
+			this.speechTherapyRequesters[key].updateCSRFToken(csrfToken);
+		}
+	}
 }
