@@ -6,15 +6,15 @@ Vue.component('new-recording-result', {
 		<div>Interpretation: <span v-html='interpretationReport' class='new-recording-result-interpretation'></span></div>
 	</div>`,
 	computed: {
-		interpretation: function() { return this.result.interpretation; },
-		score: function() { return this.result.score; },
-		isScored: function() { return this.score >= 0; },
-		interpretationReport: function() {
+		interpretation() { return this.result.interpretation; },
+		score() { return this.result.score; },
+		isScored() { return this.score >= 0; },
+		interpretationReport() {
 			if (this.isRecording) return '';
 			if (this.interpretation) return this.interpretation;
 			return 'Analyzing audio...';
 		},
-		scoreReport: function() {
+		scoreReport() {
 			if (this.isRecording) return '';
 			if (this.isScored) return this.score + '%';
 			if (this.interpretation) return 'Scoring...';

@@ -46,11 +46,11 @@ Vue.component('new-recording', {
 			</div>
 		</div>
 	</div>`,
-	mounted: function() {
+	mounted() {
 		this.initMediaDevices();
 		if (this.textSamples.length > 0) this.nextTextSample();
 	},
-	data: function() {
+	data() {
 		return {
 			gettingStream: true,
 			failedToGetUserMedia: true,
@@ -80,75 +80,63 @@ Vue.component('new-recording', {
 		};
 	},
 	computed: {
-		hasNoResults: function() { return this.results.length > 0; },
-		disableRecordingControls: function() { return this.processing || this.gettingTextSamples; },
-		disableTextSampleControls: function() { return this.listening || this.disableRecordingControls; },
-		showNewRecordingData: function() { return this.audioSrc && !this.listening; },
-		canvas: function() { return this.$refs.analyser; },
-		audioElement: function() { return this.$refs.audioElement; },
-		spacing: function() { return Math.round(this.canvas.width / this.numBars); },
-		barWidth: function() { return Math.floor(this.spacing / 2); },
-		frequencyBinCount: function() { return Math.min(this.analyserNode.frequencyBinCount, 512); },
-		multiplier: function() { return this.frequencyBinCount / this.numBars; },
-		activeTextSample: function() { return this.activeTextSampleIndex < 0 ? {} : this.textSamples[this.activeTextSampleIndex]; }
+		hasNoResults() { return this.results.length > 0; },
+		disableRecordingControls() { return this.processing || this.gettingTextSamples; },
+		disableTextSampleControls() { return this.listening || this.disableRecordingControls; },
+		showNewRecordingData() { return this.audioSrc && !this.listening; },
+		canvas() { return this.$refs.analyser; },
+		audioElement() { return this.$refs.audioElement; },
+		spacing() { return Math.round(this.canvas.width / this.numBars); },
+		barWidth() { return Math.floor(this.spacing / 2); },
+		frequencyBinCount() { return Math.min(this.analyserNode.frequencyBinCount, 512); },
+		multiplier() { return this.frequencyBinCount / this.numBars; },
+		activeTextSample() { return this.activeTextSampleIndex < 0 ? {} : this.textSamples[this.activeTextSampleIndex]; }
 	},
 	watch: {
-		active: function() {
+		active() {
 			if (this.active) this.activate();
 			else this.deactivate();
 		},
-		textSamples: function(newVal, oldVal) {
+		textSamples(newVal, oldVal) {
 			this.textSamplesGotten = true;
 			this.activeTextSampleIndex = 0;
 		}
 	},
 	methods: {
-		initMediaDevices: function() {
-			if (navigator.getUserMedia) {
-				navigator.getUserMedia(this.constraints, stream => this.gotStream(stream), err => {
-					alert('Unable to access audio.\n\n' + err);
-					console.log('The following error occurred: ' + err);
-					this.gettingStream = false;
-				});
-			}
-			else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-				navigator.mediaDevices.getUserMedia(this.constraints).then(stream => this.gotStream(stream)).catch(err => {
-					alert('Unable to access audio.\n\n' + err);
-					console.log('The following error occurred: ' + err);
-					this.gettingStream = false;
-				});
-			}
-			else this.gettingStream = false;
+		initMediaDevices() {
+			if (navigator.getUserMedia) navigator.getUserMedia(this.constraints, stream => this.gotStream(stream), err => this.failedToGetStream(err));
+			else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) navigator.mediaDevices.getUserMedia(this.constraints).then(stream => this.gotStream(stream)).catch(err => this.failedToGetStream(err));
+			else this.failedToGetStream('No known method of getting user media device.');
 		},
-		nextTextSample: function() {
+		nextTextSample() {
 			this.setActiveTextSamplePage(this.activeTextSampleIndex + 1);
 		},
-		prevTextSample: function() {
+		prevTextSample() {
 			this.setActiveTextSamplePage(this.activeTextSampleIndex - 1);
 		},
-		setActiveTextSamplePage: function(page) {
+		setActiveTextSamplePage(page) {
 			if (page >= this.textSamples.length) page = 0;
 			else if (page < 0) page = this.textSamples.length - 1;
 			this.activeTextSampleIndex = page;
 		},
-		getNewTextSamples: function() {
+		getNewTextSamples() {
 			if (this.listening) return;
 			this.textSamplesGotten = false;
 			this.$emit('get-new-text-samples');
 		},
-		startTextSampleSearch: function() {
+		startTextSampleSearch() {
 			this.showTextSearch = true;
 		},
-		endTextSamplesSearch: function() {
+		endTextSamplesSearch() {
 			this.showTextSearch = false;
 		},
-		searchTextSamples: function(text) {
+		searchTextSamples(text) {
 			this.$emit('search-text-samples', text);
 		},
-		selectTextSamples: function(textSamples) {
+		selectTextSamples(textSamples) {
 			this.$emit('add-text-samples', textSamples);
 		},
-		endRecording: function() {
+		endRecording() {
 			clearTimeout(this.timeout);
 			this.timeout = null;
 			this.listening = false;
@@ -163,7 +151,7 @@ Vue.component('new-recording', {
 				text_sample_id: this.activeTextSample.id
 			});
 		},
-		beginRecording: function() {
+		beginRecording() {
 			if (this.timeout) return;
 			this.audioSrc = '';
 			this.recBuffers = [[], []];
@@ -172,7 +160,7 @@ Vue.component('new-recording', {
 			this.timeout = setTimeout(() => this.endRecording(), this.maxTime);
 			this.$emit('recording-begun');
 		},
-		exportWAV: function() {
+		exportWAV() {
 			let buffers = [];
 			for (let i = 0; i < this.numChannels; i++) {
 				buffers.push(this.mergeBuffers(this.recBuffers[i], this.recLength));
@@ -185,7 +173,12 @@ Vue.component('new-recording', {
 
 			return blob;
 		},
-		gotStream: function (stream) {
+		failedToGetStream(err) {
+			alert('Unable to access audio.\n\n' + err);
+			this.gettingStream = false;
+			console.log('The following error occurred: ' + err);
+		},
+		gotStream(stream) {
 			this.gettingStream = false;
 			this.failedToGetUserMedia = false;
 
@@ -200,7 +193,7 @@ Vue.component('new-recording', {
 			this.source = this.audioContext.createMediaStreamSource(stream);
 			this.context = this.source.context;
 			this.node = (this.context.createScriptProcessor || this.context.createJavaScriptNode).call(this.context, 16384, this.numChannels, this.numChannels);
-			this.node.onaudioprocess = (e) => {
+			this.node.onaudioprocess = e => {
 				if (!this.listening) return;
 
 				for (let i = 0; i < this.numChannels; i++) {
@@ -208,11 +201,11 @@ Vue.component('new-recording', {
 				}
 
 				this.recLength += this.recBuffers[0][0].length;
-			}
+			};
 			this.source.connect(this.node);
 			this.node.connect(this.context.destination);
 		},
-		startAudioVisualizer: function() {
+		startAudioVisualizer() {
 			this.audioVisualizerInterval = setInterval(() => {
 				this.analyserNode.getByteFrequencyData(this.freqByteData);
 
@@ -234,17 +227,17 @@ Vue.component('new-recording', {
 				}
 			}, 15);
 		},
-		stopAudioVisualizer: function() {
+		stopAudioVisualizer() {
 			clearInterval(this.audioVisualizerInterval);
 		},
-		activate: function() {
+		activate() {
 			this.startAudioVisualizer();
 		},
-		deactivate: function() {
+		deactivate() {
 			this.stopAudioVisualizer();
 			if (this.listening) this.endRecording();
 		},
-		mergeBuffers: function(buffers, len) {
+		mergeBuffers(buffers, len) {
 			let result = new Float32Array(len);
 			let offset = 0;
 			buffers.forEach(buffer => {
@@ -253,7 +246,7 @@ Vue.component('new-recording', {
 			});
 			return result;
 		},
-		interleave: function(inputL, inputR) {
+		interleave(inputL, inputR) {
 			let len = inputL.length + inputR.length;
 			let result = new Float32Array(len);
 
@@ -268,18 +261,18 @@ Vue.component('new-recording', {
 
 			return result;
 		},
-		floatTo16BitPCM: function(output, offset, input){
+		floatTo16BitPCM(output, offset, input){
 			for (let i = 0; i < input.length; i++, offset+=2){
 				let s = Math.max(-1, Math.min(1, input[i]));
 				output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
 			}
 		},
-		writeString: function(view, offset, string){
+		writeString(view, offset, string){
 			for (let i = 0; i < string.length; i++) {
 				view.setUint8(offset + i, string.charCodeAt(i));
 			}
 		},
-		encodeWAV: function(samples){
+		encodeWAV(samples){
 			let buffer = new ArrayBuffer(44 + samples.length * 2);
 			let view = new DataView(buffer);
 

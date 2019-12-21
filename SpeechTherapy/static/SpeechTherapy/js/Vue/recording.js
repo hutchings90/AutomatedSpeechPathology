@@ -20,37 +20,37 @@ Vue.component('recording', {
 		</td>
 		<td v-html='recording.score + "%"'></td>
 	</tr>`,
-	data: function() {
+	data() {
 		return {
 			shouldPlay: false,
 			isStopping: false
 		};
 	},
 	computed: {
-		dateDisplay: function() {
+		dateDisplay() {
 			return (new Date(this.recording.date_recorded)).toLocaleString('default', {
 				month: 'numeric',
 				year: 'numeric',
 				day: 'numeric'
 			});
 		},
-		timeDisplay: function() {
+		timeDisplay() {
 			return (new Date(this.recording.date_recorded)).toLocaleString('default', {
 				hour: 'numeric',
 				minute: '2-digit'
 			});
 		},
-		playHTML: function() { return this.shouldPlay ? '&#10074;&#10074;' : '&#9658;'; },
-		audio: function() { return this.$refs.audio; }
+		playHTML() { return this.shouldPlay ? '&#10074;&#10074;' : '&#9658;'; },
+		audio() { return this.$refs.audio; }
 	},
 	watch: {
-		shouldPlay: function() {
+		shouldPlay() {
 			if (this.isStopping) this.isStopping = false;
 			else if (this.audioRecording != this.recording) this.$emit('play-recording', this.recording);
 			else if (this.shouldPlay) this.play();
 			else this.pause();
 		},
-		audioRecording: function() {
+		audioRecording() {
 			if (this.audioRecording == this.recording) this.play();
 			else {
 				let wasPlaying = this.shouldPlay;
@@ -60,15 +60,15 @@ Vue.component('recording', {
 		}
 	},
 	methods: {
-		play: function() {
+		play() {
 			this.audio.play();
 			this.shouldPlay = true;
 		},
-		pause: function() {
+		pause() {
 			this.audio.pause();
 			this.shouldPlay = false;
 		},
-		stop: function() {
+		stop() {
 			this.pause();
 			this.audio.currentTime = 0;
 			this.isStopping = true;

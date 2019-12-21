@@ -10,7 +10,7 @@ Vue.component('admin-form', {
 		</form>
 	</div>`,
 	methods: {
-		importTextSamples: function(ev) {
+		importTextSamples(ev) {
 			this.$emit('import-text-samples', ev.target.files[0]);
 		}
 	}

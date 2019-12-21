@@ -26,17 +26,17 @@ Vue.component('profile-form', {
 		<p class='profile-form-notes' v-html='notes'></p>
 	</div>`,
 	methods: {
-		updateAttr: function(attr) {
+		updateAttr(attr) {
 			this.$emit('update-attr', attr);
 		},
-		submit: function(e) {
+		submit(e) {
 			this.$emit('submit', e);
 			return false;
 		},
-		leftExtraClicked: function() {
+		leftExtraClicked() {
 			this.$emit('left-extra-clicked');
 		},
-		rightExtraClicked: function() {
+		rightExtraClicked() {
 			this.$emit('right-extra-clicked');
 		}
 	}

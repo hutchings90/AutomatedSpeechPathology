@@ -41,7 +41,7 @@ Vue.component('recordings', {
 			</tbody>
 		</table>
 	</div>`,
-	data: function() {
+	data() {
 		return {
 			activePageNumber: 1,
 			sampleTextRecording: null,
@@ -49,8 +49,8 @@ Vue.component('recordings', {
 		};
 	},
 	computed: {
-		pageCount: function() { return Math.ceil(this.recordingCount / this.recordingsPerPage); },
-		displayedPages: function() {
+		pageCount() { return Math.ceil(this.recordingCount / this.recordingsPerPage); },
+		displayedPages() {
 			let min = Math.max(1, this.activePageNumber - 3);
 			let max = Math.min(this.pageCount, min + 6);
 			let pages = [];
@@ -64,8 +64,8 @@ Vue.component('recordings', {
 			return pages;
 		},
 		recordingsPerPage: {
-			get: function() { return this.sharedData.recordingsPerPage; },
-			set: function(recordingsPerPage) {
+			get() { return this.sharedData.recordingsPerPage; },
+			set(recordingsPerPage) {
 				let oldVal = this.recordingsPerPage;
 				this.sharedData.recordingsPerPage = recordingsPerPage;
 				if (this.recordingsPerPage < 10) this.recordingsPerPage = 10;
@@ -80,29 +80,29 @@ Vue.component('recordings', {
 		}
 	},
 	watch: {
-		activePageNumber: function() {
+		activePageNumber() {
 			if (this.activePageNumber > this.pageCount) this.activePageNumber = this.pageCount;
 			else if (this.activePageNumber < 1) this.activePageNumber = 1;
 			else this.getRecordings(this.activePageNumber);
 		},
-		pageNumberAfterGetRecordings: function() {
+		pageNumberAfterGetRecordings() {
 			this.activePageNumber = this.pageNumberAfterGetRecordings;
 		}
 	},
 	methods: {
-		resetRecordings: function() {
+		resetRecordings() {
 			this.setAudioRecording();
 			this.activePageNumber = 1;
 			this.recordingsPerPage = 10;
 			this.getRecordings(this.activePageNumber);
 		},
-		getRecordings: function(pageNumberAfterGetRecordings) {
+		getRecordings(pageNumberAfterGetRecordings) {
 			this.$emit('get-recordings', {
 				page: this.activePageNumber,
 				pageNumberAfterGetRecordings: pageNumberAfterGetRecordings,
 			});
 		},
-		setAudioRecording: function(recording) {
+		setAudioRecording(recording) {
 			this.audioRecording = recording;
 		}
 	}

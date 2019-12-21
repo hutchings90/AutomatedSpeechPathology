@@ -23,59 +23,59 @@ Vue.component('text-search', {
 			</div>
 		</div>
 	</div>`,
-	mounted: function() {
+	mounted() {
 		this.searchInput.focus();
 	},
-	data: function() {
+	data() {
 		return {
 			input: '',
 			selectedTextSampleIds: []
 		};
 	},
 	computed: {
-		toggleAllText: function() { return (this.selectAll ? 'Unselect' : 'Select') + ' All'; },
-		searchInput: function() { return this.$refs['search-input']; },
-		isValidInput: function() { return this.input.length > 4; },
-		hasTextSamples: function() { return this.textSamples.length > 0; },
-		hasSelections: function() { return this.selectedTextSamples.length > 0; },
-		keyedTextSamples: function() {
+		toggleAllText() { return (this.selectAll ? 'Unselect' : 'Select') + ' All'; },
+		searchInput() { return this.$refs['search-input']; },
+		isValidInput() { return this.input.length > 4; },
+		hasTextSamples() { return this.textSamples.length > 0; },
+		hasSelections() { return this.selectedTextSamples.length > 0; },
+		keyedTextSamples() {
 			return this.textSamples.reduce((textSamples, textSample) => {
 				textSamples[textSample.id] = textSample;
 				return textSamples;
 			}, {});
 		},
-		selectedTextSamples: function() { return this.selectedTextSampleIds.map(id => this.keyedTextSamples[id]); },
-		report: function() {
+		selectedTextSamples() { return this.selectedTextSampleIds.map(id => this.keyedTextSamples[id]); },
+		report() {
 			if (this.hasTextSamples || this.searching) return '';
 			if (this.isValidInput) return 'No matching phrases found.';
 			return 'Type at least 5 characters to search for phrases.';
 		},
-		textSampleIds: function() { return this.textSamples.map(textSample => textSample.id); },
+		textSampleIds() { return this.textSamples.map(textSample => textSample.id); },
 		selectAll: {
-			get: function() { return this.selectedTextSampleIds.length == this.textSampleIds.length; },
-			set: function() {
+			get() { return this.selectedTextSampleIds.length == this.textSampleIds.length; },
+			set() {
 				this.selectedTextSampleIds = this.selectAll ? [] : this.textSampleIds;
 			}
 		}
 	},
 	watch: {
-		textSamples: function() {
+		textSamples() {
 			this.selectedTextSampleIds = this.selectedTextSampleIds.filter(id => this.keyedTextSamples[id]);
 		}
 	},
 	methods: {
-		handleInput: function() {
+		handleInput() {
 			if (this.isValidInput) this.$emit('search', this.input);
 		},
-		close: function() {
+		close() {
 			this.$emit('close');
 			this.selectedTextSampleIds = [];
 		},
-		selectTextSamples: function() {
+		selectTextSamples() {
 			this.$emit('select-text-samples', this.selectedTextSamples);
 			this.close();
 		},
-		toggleAll: function() {
+		toggleAll() {
 			this.selectAll = !this.selectAll;
 		}
 	}
