@@ -5,7 +5,7 @@
 **Note:** This repository was created for a Computer Science Master's project at Brigham Young University - Provo, requested by Dr. Quinn Snell. The future use and development of this project will be directed by Dr. Snell.
 
 ### Setup
-This project was built in a Windows environment. As such, restart.bat in the project root has been provided for easy setup on a Windows machine. You will be prompted to add an admin username and password. Setting up in other environments, such as Mac and Linux, should be similar to what is found in the restart.bat file.
+This project was built in a Windows environment. As such, restart.bat in the project root has been provided for easy setup on a Windows machine. You will be prompted to add an admin user's password. Setting up in other environments, such as Mac and Linux, should be similar to what is found in the restart.bat file.
 
 ### Django Framework
 This project was built with the Django v2.2.5 Python web framework. It was tested in development mode, so testing will need to be done in production mode to ensure correct functionality.
