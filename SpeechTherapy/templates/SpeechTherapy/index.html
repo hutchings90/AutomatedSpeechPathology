@@ -129,93 +129,93 @@
 	let vue = new Vue({
 		el: '#speech-therapy-app',
 		data: JSON.parse('{{ data | escapejs }}'),
-		created: function() {
+		created() {
 			this.initXHRs();
 			this.initNewRecordingInterpreter();
 			this.updateCSRFToken('{{ csrfToken }}');
 		},
 		computed: {
-			signedIn: function() { return this.user.id; },
-			hasRecordings: function() { return this.recordingCount > 0; },
-			processingNewRecording: function() { return this.recordingsInterpreted < this.newRecordingResults.length || this.recordingsScored < this.newRecordingResults.length; },
-			resultsHistoryClass: function() {
+			signedIn() { return this.user.id; },
+			hasRecordings() { return this.recordingCount > 0; },
+			processingNewRecording() { return this.recordingsInterpreted < this.newRecordingResults.length || this.recordingsScored < this.newRecordingResults.length; },
+			resultsHistoryClass() {
 				let resultsHistoryClass = this.headerClass("resultsHistory");
 				resultsHistoryClass.disabled = !this.hasRecordings;
 				return resultsHistoryClass;
 			},
-			keyedTextSamples: function() {
+			keyedTextSamples() {
 				return this.textSamples.reduce((textSamples, textSample) => {
 					textSamples[textSample.id] = textSample;
 					return textSamples;
 				}, {});
 			},
-			maxTextSampleId: function() { return Math.max(...this.textSamples.map(textSample => textSample.id)); }
+			maxTextSampleId() { return Math.max(...this.textSamples.map(textSample => textSample.id)); }
 		},
 		methods: {
-			initXHRs: function() {
+			initXHRs() {
 				this.speechTherapyRequesters = {};
 				this.addSpeechTherapyRequest('upSigner', new UpSigner({
 					url: '{% url "signUp" %}',
-					onSuccess: (response) => this.onSignUpSuccess(response),
+					onSuccess: response => this.onSignUpSuccess(response),
 					onError: (response, status) => this.addError(response),
 					onComplete: () => this.signingUp = false
 				}));
 				this.addSpeechTherapyRequest('outSigner', new OutSigner({
 					url: '{% url "signOut" %}',
-					onSuccess: (response) => this.onSignOutSuccess(response),
+					onSuccess: response => this.onSignOutSuccess(response),
 					onError: (response, status) => this.addError(response),
 					onComplete: () => this.signingOut = false
 				}));
 				this.addSpeechTherapyRequest('inSigner', new InSigner({
 					url: '{% url "signIn" %}',
-					onSuccess: (response) => this.onSignInSuccess(response),
+					onSuccess: response => this.onSignInSuccess(response),
 					onError: (response, status) => this.addError(response),
 					onComplete: () => this.signingIn = false
 				}));
 				this.addSpeechTherapyRequest('signInHelper', new SignInHelper({
 					url: '{% url "sendSignInHelpEmail" %}',
-					onSuccess: (response) => this.onSignInHelpSuccess(response),
+					onSuccess: response => this.onSignInHelpSuccess(response),
 					onError: (response, status) => this.addError(response),
 					onComplete: () => this.sendingSignInHelpEmail = false
 				}));
 				this.addSpeechTherapyRequest('profileUpdater', new ProfileUpdater({
 					url: '{% url "updateUser" %}',
-					onSuccess: (response) => this.onUpdateUserSuccess(response),
+					onSuccess: response => this.onUpdateUserSuccess(response),
 					onError: (response, status) => this.addError(response),
-					onComplete: (response) => this.onUpdateUserComplete(response)
+					onComplete: response => this.onUpdateUserComplete(response)
 				}));
 				this.addSpeechTherapyRequest('recordingUploader', new RecordingUploader({
 					url: '{% url "newRecording" %}',
-					onSuccess: (response) => this.onNewRecordingSuccess(response),
+					onSuccess: response => this.onNewRecordingSuccess(response),
 					onError: (response, status) => this.addError(response),
 					onComplete: () => this.recordingsScored++
 				}));
 				this.addSpeechTherapyRequest('newTextSamplesGetter', new NewTextSamplesGetter({
 					url: '{% url "getTextSamples" %}',
-					onSuccess: (response) => this.onGetNewTextSampleSuccess(response),
+					onSuccess: response => this.onGetNewTextSampleSuccess(response),
 					onError: (response, status) => this.addError(response),
 					onComplete: () => this.gettingTextSamples = false
 				}));
 				this.addSpeechTherapyRequest('recordingsGetter', new RecordingsGetter({
 					url: '{% url "getRecordings" %}',
-					onSuccess: (response) => this.onGetRecordingSuccess(response),
+					onSuccess: response => this.onGetRecordingSuccess(response),
 					onError: (response, status) => this.addError(response),
 					onComplete: () => this.gettingRecordings = false
 				}));
 				this.addSpeechTherapyRequest('textSamplesImporter', new TextSamplesImporter({
 					url: '{% url "importTextSamples" %}',
-					onSuccess: (response) => this.onTextSamplesImportSuccess(response),
+					onSuccess: response => this.onTextSamplesImportSuccess(response),
 					onError: (response, status) => this.addError(response),
 					onComplete: () => this.importingTextSamples = false
 				}));
 				this.addSpeechTherapyRequest('textSamplesSearcher', new TextSamplesSearcher({
 					url: '{% url "searchTextSamples" %}',
-					onSuccess: (response) => this.onTextSamplesSearchSuccess(response),
+					onSuccess: response => this.onTextSamplesSearchSuccess(response),
 					onError: (response, status) => this.addError(response),
 					onComplete: () => this.searchingTextSamples = false
 				}));
 			},
-			initNewRecordingInterpreter: function() {
+			initNewRecordingInterpreter() {
 				this.newRecordingInterpreter = new NewRecordingInterpreter('{% url "demoSpeechAnalyzer" %}', {
 					onSuccess: (newRecordingResultsIndex, data) => this.handleRecordingInterpretation(newRecordingResultsIndex, data),
 					onError: (newRecordingResultsIndex, response, status) => this.addError(newRecordingResultsIndex, response),
@@ -234,74 +234,74 @@
 				this.recordingsInterpreted = this.newRecordingResults.length;
 				this.recordingsScored = this.newRecordingResults.length;
 			},
-			headerClass: function(tab) {
+			headerClass(tab) {
 				return {
 					active: tab == this.activeTab
 				};
 			},
-			activateTab: function(tab) {
+			activateTab(tab) {
 				this.activeTab = tab;
 			},
-			activateResultsHistoryTab: function() {
+			activateResultsHistoryTab() {
 				if (!this.hasRecordings) return;
 				this.activateTab("resultsHistory");
 			},
-			signUp: function() {
+			signUp() {
 				this.signingUp = true;
 				this.speechTherapyRequesters.upSigner.submit(this.user);
 			},
-			signIn: function() {
+			signIn() {
 				this.signingIn = true;
 				this.speechTherapyRequesters.inSigner.submit(this.user.username, this.user.password);
 			},
-			getSignInHelp: function() {
+			getSignInHelp() {
 				this.activeTab = 'signInHelp';
 			},
-			sendSignInHelpEmail: function() {
+			sendSignInHelpEmail() {
 				this.sendingSignInHelpEmail = true;
 				this.speechTherapyRequesters.signInHelper.submit(this.user.username);
 			},
-			onSignInHelpSuccess: function(response) {
+			onSignInHelpSuccess(response) {
 				this.addSuccess('Email sent.');
 				this.endSignInHelp();
 			},
-			endSignInHelp: function() {
+			endSignInHelp() {
 				this.activeTab = 'signIn';
 				this.sendingSignInHelpEmail = false;
 			},
-			signOut: function() {
+			signOut() {
 				this.signingOut = true;
 				this.speechTherapyRequesters.outSigner.submit();
 			},
-			getNewTextSamples: function() {
+			getNewTextSamples() {
 				this.gettingTextSamples = true;
 				this.updateTs('lastGetTextSamplesTs');
 				this.speechTherapyRequesters.newTextSamplesGetter.submit(this.maxTextSampleId, this.lastGetTextSamplesTs);
 			},
-			getRecordings: function(data) {
+			getRecordings(data) {
 				this.gettingRecordings = true;
 				this.updateTs('lastGetRecordingsTs');
 				this.speechTherapyRequesters.recordingsGetter.submit(data.page, this.sharedRecordingsData.recordingsPerPage, data.pageNumberAfterGetRecordings, this.lastGetRecordingsTs);
 			},
-			updateUser: function(attr) {
+			updateUser(attr) {
 				if (this.updatingUser) this.pendingUserUpdates.push(attr);
 				else {
 					this.updatingUser = true;
 					this.speechTherapyRequesters.profileUpdater.submit(attr, this.user[attr]);
 				}
 			},
-			importTextSamples: function(file) {
+			importTextSamples(file) {
 				this.importingTextSamples = true;
 				this.updateTs('lastGetTextSamplesTs');
 				this.speechTherapyRequesters.textSamplesImporter.submit(this.lastGetTextSamplesTs, file);
 			},
-			recordingBegun: function() {
+			recordingBegun() {
 				this.newRecordingResults.forEach(result => {
 					result.interpretation = '',
 					result.score = -1
 				});
 			},
-			handleNewRecording: function(data) {
+			handleNewRecording(data) {
 				this.recordingsInterpreted = 0;
 				this.recordingsScored = 0;
 				this.updateTs('newRecordingTs');
@@ -312,35 +312,35 @@
 				data.ts = this.newRecordingTs;
 				this.newRecordingInterpreter.submit(data);
 			},
-			handleRecordingInterpretation: function(i, data) {
+			handleRecordingInterpretation(i, data) {
 				this.saveNewRecording(i, data);
 
 				if (data.ts < this.newRecordingTs) return;
 				this.newRecordingResults[i].interpretation = data.interpretation;
 			},
-			saveNewRecording: function(i, data) {
+			saveNewRecording(i, data) {
 				this.updateTs('lastGetRecordingsTs');
 				this.speechTherapyRequesters.recordingUploader.submit(i, this.sharedRecordingsData.recordingsPerPage, this.lastGetRecordingsTs, data);
 			},
-			searchTextSamples: function(text) {
+			searchTextSamples(text) {
 				this.searchingTextSamples = true;
 				this.updateTs('lastTextSampleSearchTs');
 				this.speechTherapyRequesters.textSamplesSearcher.submit(text, this.lastTextSampleSearchTs);
 			},
-			addTextSamples: function(textSamples) {
+			addTextSamples(textSamples) {
 				let newTextSamples = textSamples.filter(textSample => !this.keyedTextSamples[textSamples.id]);
 				this.textSamples = newTextSamples.concat(this.textSamples).slice(0, 30);
 			},
-			addSpeechTherapyRequest: function(key, speechTherapyRequester) {
+			addSpeechTherapyRequest(key, speechTherapyRequester) {
 				this.speechTherapyRequesters[key] = speechTherapyRequester;
 			},
-			updateCSRFToken: function(csrfToken) {
+			updateCSRFToken(csrfToken) {
 				for (let key in this.speechTherapyRequesters) {
 					this.speechTherapyRequesters[key].updateCSRFToken(csrfToken);
 				}
 				this.newRecordingInterpreter.updateCSRFToken(csrfToken);
 			},
-			onSignUpSuccess: function(response) {
+			onSignUpSuccess(response) {
 				if (response.errors) {
 					this.addError(response.errors.join('<br>'));
 					return;
@@ -353,7 +353,7 @@
 				this.updateCSRFToken(response.csrfToken);
 				this.activateTab('newRecording');
 			},
-			onSignOutSuccess: function(response) {
+			onSignOutSuccess(response) {
 				this.user = response.user;
 				this.recordings = [];
 				this.recordingCount = 0;
@@ -361,7 +361,7 @@
 				this.updateCSRFToken(response.csrfToken);
 				this.activateTab('signIn');
 			},
-			onSignInSuccess: function(response) {
+			onSignInSuccess(response) {
 				this.user = response.user;
 				this.recordings = response.recordings;
 				this.recordingCount = response.recordingCount;
@@ -369,15 +369,15 @@
 				this.updateCSRFToken(response.csrfToken);
 				this.activateTab('newRecording');
 			},
-			onUpdateUserSuccess: function(response) {
+			onUpdateUserSuccess(response) {
 				this.updateCSRFToken(response.csrfToken);
 			},
-			onUpdateUserComplete: function(response) {
+			onUpdateUserComplete(response) {
 				// Set this.updateUser to false before calling updateUser so that the update request will get sent.
 				this.updatingUser = false;
 				if (this.pendingUserUpdates.length > 0) this.updateUser(this.pendingUserUpdates.shift());
 			},
-			onNewRecordingSuccess: function(response) {
+			onNewRecordingSuccess(response) {
 				this.newRecordingResults[response.newRecordingResultsIndex].score = response.recording.score;
 
 				// Don't accept recordings from a request that was made before the most recent request.
@@ -385,42 +385,42 @@
 				this.recordingCount = response.recordingCount;
 				this.recordings = response.recordings;
 			},
-			onGetNewTextSampleSuccess: function(response) {
+			onGetNewTextSampleSuccess(response) {
 				// Don't accept text samples from a request that was made before the most recent request.
 				if (response.ts < this.lastGetTextSamplesTs) return;
 				this.lastGetTextSamplesTs = response.ts;
 				this.textSamples = response.textSamples;
 			},
-			onTextSamplesSearchSuccess: function(response) {
+			onTextSamplesSearchSuccess(response) {
 				// Don't accept text samples from a request that was made before the most recent request.
 				if (response.ts < this.lastTextSampleSearchTs) return;
 				this.lastTextSampleSearchTs = response.ts;
 				this.searchedTextSamples = response.textSamples;
 			},
-			onGetRecordingSuccess: function(response) {
+			onGetRecordingSuccess(response) {
 				// Don't accept recordings from a request that was made before the most recent request.
 				if (response.ts < this.lastGetRecordingsTs) return;
 				this.lastGetRecordingsTs = response.ts;
 				this.recordings = response.recordings;
 				this.pageNumberAfterGetRecordings = response.pageNumberAfterGetRecordings;
 			},
-			onTextSamplesImportSuccess: function(response) {
+			onTextSamplesImportSuccess(response) {
 				this.addSuccess('Text samples imported.');
 
 				// Don't accept recordings from a request that was made before the most recent request.
 				if (response.ts < this.lastGetTextSamplesTs) return;
 				if (this.textSamples.length < 1) this.textSamples = response.textSamples;
 			},
-			reportDone: function(error) {
+			reportDone(error) {
 				this.reports.splice(this.reports.indexOf(error), 1);
 			},
-			addError: function(error) {
+			addError(error) {
 				this.addReport(error, 'error');
 			},
-			addSuccess: function(success) {
+			addSuccess(success) {
 				this.addReport(success, 'success');
 			},
-			addReport: function(value, type) {
+			addReport(value, type) {
 				let report = {
 					value: value,
 					type: type,
@@ -432,10 +432,10 @@
 					if (this.reports.indexOf(report) == this.reports.length - 1) this.reports = [];
 				}, 6500);
 			},
-			updateTs: function(prop) {
+			updateTs(prop) {
 				this[prop] = this.unixNow();
 			},
-			unixNow: function() {
+			unixNow() {
 				return Math.floor(Date.now() / 1000);
 			}
 		}
