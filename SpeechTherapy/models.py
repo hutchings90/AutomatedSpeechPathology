@@ -29,6 +29,7 @@ class Recording(models.Model):
 		}
 
 	def assignScore(self):
+		# TODO: This is a very basic scoring system. It should be updated with future development.
 		expectedSet = set(re.sub('[^\w]', ' ', self.text_sample.text).strip().split())
 		actualSet = set(re.sub('[^\w]', ' ', self.interpretation).strip().split())
 		diff = len(list(expectedSet - actualSet))
