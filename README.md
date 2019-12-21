@@ -15,7 +15,7 @@ This project was built with the Django v2.2.5 Python web framework. It was teste
 
 ### JavaScript Framework
 This project uses the Vue.js framework.
-#### Important classes
+#### Noteworthy classes
 - NewRecordingInterpreter
   - SpeechTherapy/static/SpeechTherapy/js/SpeechAnalyer/NewRecordingInterpreter.js
   - A proxy class

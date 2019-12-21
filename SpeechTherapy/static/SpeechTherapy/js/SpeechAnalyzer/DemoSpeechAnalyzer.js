@@ -4,10 +4,10 @@
  *
  */
 
- /**
-  * The DemoFrontEndSpeechAnalyzer class. Extends SpeechAnalyzer. For use in demonstrating the
-  * capabilities of the website.
-  */
+/**
+ * The DemoFrontEndSpeechAnalyzer class. Extends SpeechAnalyzer. For use in demonstrating the
+ * capabilities of the website.
+ */
 class DemoFrontEndSpeechAnalyzer extends SpeechAnalyzer {
 	// Static getter for possible speech-to-text results.
 	static get resultOptions() {
@@ -66,10 +66,10 @@ class DemoFrontEndSpeechAnalyzer extends SpeechAnalyzer {
 	}
 }
 
- /**
-  * The DemoFrontEndSpeechAnalyzer class. Extends SpeechAnalyzer. For use in demonstrating the
-  * capabilities of the website.
-  */
+/**
+ * The DemoFrontEndSpeechAnalyzer class. Extends SpeechAnalyzer. For use in demonstrating the
+ * capabilities of the website.
+ */
 class DemoXHRSpeechAnalyzer extends SpeechAnalyzer {
 	/**
 	 * Initializes data members.

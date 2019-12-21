@@ -42,7 +42,7 @@ class SpeechAnalyzer {
 	 * _onSuccess.
 	 * 
 	 * @param {number} index The position of this SpeechAnalyzer within an instance of
-	 *   NewRecordingInterpreter.
+	 *   NewRecordingInterpreter
 	 * @param {Object} data The relevant data
 	 */
 	onSuccess(index, data) {}
@@ -61,7 +61,7 @@ class SpeechAnalyzer {
 	 * A stub to be overridden by a value in the handlers object of the constructor. Called by
 	 * _onError.
 	 * @param {number} index The position of this SpeechAnalyzer within an instance of
-	 *   NewRecordingInterpreter.
+	 *   NewRecordingInterpreter
 	 * @param {mixed} response The response from the speech-to-text analysis
 	 * @param {int} status The HTTP status code of the response
 	 */
